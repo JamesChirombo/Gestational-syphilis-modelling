@@ -4,6 +4,9 @@ library(rgdal)
 library(tidyverse)
 library(RColorBrewer)
 library(maptools)
+library(spdep)
+library(INLA)
+library(CARBayesST)
 
 ## load required spatial data
 ## malawi districts
@@ -18,6 +21,8 @@ lakes <- readOGR("data/spatial","lakes")
 ## load syhphilis data
 
 dat <- read.csv("data/epidata/syphilis_data.csv",header = T,stringsAsFactors = F)
+j <- which(dat$district=="")
+dat <- dat[-j,]
 
 ## compute the total number of women
 
@@ -366,5 +371,34 @@ summary(m1)
 exp(cbind(IRR=coef(m1),CI=confint(m1)))
 
 
+### regression modelling for lattice data n- spatio-temporal modelling ### 
+### CAR models 
 
+### create adjacency matrix for malawi
+malawiadj <- poly2nb(mwdistr,queen = F)
+adjMat <- nb2mat(malawiadj,style = "B",zero.policy = T)
+adjMat <- as(adjMat,"dgTMatrix")
 
+modelFormula <- log(allwomen) + covrge + borderDistr + f(distcod,model = "besag",graph = adjMat)
+m1 <- inla(modelFormula,data = dat)
+
+### CAR models using CARBayesST
+MWnb <- poly2nb(mwdistr)
+mwMat <- nb2mat(MWnb,style = "B", zero.policy = TRUE)
+mwMat <- mwMat[-10,-10] # remove Likoma 
+finaldat <- filter(dat,district != "likoma")
+
+## remove missing values
+k = which(is.na(finaldat$allwomen))
+finaldat[k,c("allwomen","district")]
+finaldata2 <- finaldat[-k,]
+## regression model ##
+fit1 <- ST.CARanova(syphpos ~ log(allwomen) + healthFac + urbanpop + borderDistr,
+                  family = "poisson",
+                  data = finaldat, 
+                  W=mwMat,
+                  burnin = 1000,
+                  n.sample = 5000,
+                  thin = 50)
+summary(fit1)
+print(fit1)
