@@ -24,6 +24,44 @@ dat <- read.csv("data/epidata/syphilis_data.csv",header = T,stringsAsFactors = F
 j <- which(dat$district=="")
 dat <- dat[-j,]
 
+## add additional columns from DHS
+variableData <- read_csv("data/epidata/Syphilis_model_var1.csv")
+variableData2 <- read_csv("data/epidata/Syphilis_model_var2.csv")
+
+dat$improved_water <- rep(variableData$`% of population using improved water source`,each=72)
+dat$improved_sanit <- rep(variableData$`% of population with access to Improved sanitation1`,each=72)
+dat$electricity <- rep(variableData$`% of households with access to electricity`,each=72)
+dat$sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=72)
+dat$median_educ <- rep(variableData$`Median years of education completed by female household membe aged 15-49r.`,each=72)
+dat$literacy <- rep(variableData$`% of women who can read a whole sentence`,each=72)
+dat$median_age_sex <- rep(variableData$`Median age of first sexual intercourse among women 20-49`,each=72)
+dat$median_age_birth <- rep(variableData$`Median age at first birth in women aged 20-49`,each=72)
+dat$perc_live_birth <- rep(variableData$`% of women aged 15-19 who have had a live birth`,each=72)
+dat$polygamy <- rep(variableData$`% of currently married men with one or more co-wives`,each=72)
+dat$employed <- rep(variableData$`% of women employed in the 12 months
+preceding the survey`,each=72)
+dat$demand_condom <- rep(variableData$`% who can ask their husband to use a condom`,each=72)
+dat$neg_sex_rel <- rep(variableData$`% of women who can negotiate sexual relations`,each=72)
+dat$STI <- rep(variableData$`% of women who reported having an STI in last 12 months`,each=72)
+dat$men_condom <- rep(variableData$`% of men using condoms`,each=72)
+dat$sex_one_partner <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=72)
+dat$paid_sex <- rep(variableData$`% of men who have ever paid for sexual intercourse`,each=72)
+dat$women_more_sexPpartners <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=72)
+dat$women_HIV_pos <- rep(variableData$`Percentage women  HIV positive`,each=72)
+dat$hosp_deliv <- rep(variableData$`% delivered in a health facility`,each=72)
+dat$blood_sample_ANC <- rep(variableData$`% who had a blood sample taken during ANC`,each=72)
+dat$nopostnatal_check <- rep(variableData$`% with no post-natal check within 2 days of birth`,each=72)
+dat$facility_deliv <- rep(variableData$`% delivered in a health facility`,each=72)
+dat$skilled_ANC <- rep(variableData$`% receiving Anc from a skilled provider`,each=72)
+dat$no_ANC <- rep(variableData$`% who received no ANC`,each=72)
+dat$problem_health_care <- rep(variableData$`% of women who reported at least  one problem accessing health care`,each=72)
+dat$TFR <- rep(variableData$`Total fertility rate`,each=72)
+dat$HTC_ANC <- rep(variableData2$`% of women who received HIV testing and counselling during ANC and delivery`,each=72)
+dat$med_months_lastBirth <- rep(variableData2$`Median number of months since last birth`,each=72)
+dat$low_BMI <- rep(variableData2$`% of women with BMI<18.5`,each=72)
+dat$severe_anaemia <- rep(variableData2$`% of women with severe anaemia`,each=72)
+dat$past_sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=72)
+
 ## compute the total number of women
 
 dat$allwomen <- rowSums(dat[,c("anc_vst1","anc_vst2","anc_vst3","anc_vst4","anc_vst5")])
