@@ -78,3 +78,61 @@ plot.syphilis.testing.coverage <- function(year){
          cex = 1)
   box(lwd=1,bty="o")
 }
+
+## function to plot yearly smr rates
+plot.syphilis.yearly.smr <- function(year){
+  if(year==2014){
+    x <- "smr2014"
+  } else if (year==2015){
+    x <- "smr2015"
+  } else if (year==2016){
+    x <- "smr2016"
+  } else if (year==2017){
+    x <- "smr2017"
+  } else if (year==2018){
+    x <- "smr2018"
+  } else {
+    x <- "smr2019"
+  }
+  brks <- c(0,0.5,1,1.5,2,2.5,3)
+  mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
+  plot(mwdistr)
+  plot(lakes,add=T,col="lightblue",density=50)
+  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
+  legend("bottomleft",
+         legend = leglabs(brks,"<",">="),
+         fill = mycol,
+         bty = "n",
+         pt.cex = 1,
+         cex = 1)
+  box(lwd=1,bty="o")
+}
+
+plot.yearly.incident.rates <- function(year){
+  if(year==2014){
+    x <- "irr_2014"
+  } else if (year==2015){
+    x <- "irr_2015"
+  } else if (year==2016){
+    x <- "irr_2016"
+  } else if (year==2017){
+    x <- "irr_2017"
+  } else if (year==2018){
+    x <- "irr_2018"
+  } else {
+    x <- "irr_2019"
+  }
+  brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
+  #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
+  mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
+  plot(mwdistr)
+  plot(lakes,add=T,col="lightblue")
+  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
+  legend("bottomleft",
+         legend = leglabs(brks,"<",">="),
+         fill = mycol,
+         bty = "n",
+         pt.cex = 1,
+         cex = 1)
+  box(lwd=1,bty="o")
+}
