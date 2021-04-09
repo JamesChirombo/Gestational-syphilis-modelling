@@ -33,8 +33,10 @@ plot.syphilis.yearly.prevelence <- function(year){
     x <- "prev2017"
   } else if (year==2018){
     x <- "prev2018"
-  } else {
+  } else if (year==2019){
     x <- "prev2019"
+  } else {
+    x <- "prev2020"
   }
   brks <- c(0.5,1,1.5,2,2.5,3,4)
   mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
@@ -91,8 +93,10 @@ plot.syphilis.yearly.smr <- function(year){
     x <- "smr2017"
   } else if (year==2018){
     x <- "smr2018"
-  } else {
+  } else if (year==2019){
     x <- "smr2019"
+  } else {
+    x <- "smr2020"
   }
   brks <- c(0,0.5,1,1.5,2,2.5,3)
   mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
@@ -119,10 +123,13 @@ plot.yearly.incident.rates <- function(year){
     x <- "irr_2017"
   } else if (year==2018){
     x <- "irr_2018"
-  } else {
+  } else if (year==2019){
     x <- "irr_2019"
+  } else {
+    x <- "irr_2020"
   }
-  brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
+  #brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
+  brks <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4)
   #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
   mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
   plot(mwdistr)
