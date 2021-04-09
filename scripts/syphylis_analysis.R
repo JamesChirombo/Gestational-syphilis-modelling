@@ -3,10 +3,13 @@ rm(list = ls())
 library(rgdal)
 library(tidyverse)
 library(RColorBrewer)
+library(viridis)
 library(maptools)
 library(spdep)
 library(INLA)
 library(CARBayesST)
+library(CARBayes)
+library(MASS)
 
 ## load required spatial data
 ## malawi districts
@@ -20,52 +23,64 @@ lakes <- readOGR("data/spatial","lakes")
 
 ## load syhphilis data
 
-dat <- read.csv("data/epidata/syphilis_data.csv",header = T,stringsAsFactors = F)
-j <- which(dat$district=="")
-dat <- dat[-j,]
+dat <- read.csv("data/epidata/syphilis_data_final.csv",header = T,stringsAsFactors = F)
+#j <- which(dat$district=="")
+#dat <- dat[-j,]
 
 ## add additional columns from DHS
 variableData <- read_csv("data/epidata/Syphilis_model_var1.csv")
 variableData2 <- read_csv("data/epidata/Syphilis_model_var2.csv")
 
-dat$improved_water <- rep(variableData$`% of population using improved water source`,each=72)
-dat$improved_sanit <- rep(variableData$`% of population with access to Improved sanitation1`,each=72)
-dat$electricity <- rep(variableData$`% of households with access to electricity`,each=72)
-dat$sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=72)
-dat$median_educ <- rep(variableData$`Median years of education completed by female household membe aged 15-49r.`,each=72)
-dat$literacy <- rep(variableData$`% of women who can read a whole sentence`,each=72)
-dat$median_age_sex <- rep(variableData$`Median age of first sexual intercourse among women 20-49`,each=72)
-dat$median_age_birth <- rep(variableData$`Median age at first birth in women aged 20-49`,each=72)
-dat$perc_live_birth <- rep(variableData$`% of women aged 15-19 who have had a live birth`,each=72)
-dat$polygamy <- rep(variableData$`% of currently married men with one or more co-wives`,each=72)
+dat$improved_water <- rep(variableData$`% of population using improved water source`,each=84)
+dat$improved_sanit <- rep(variableData$`% of population with access to Improved sanitation1`,each=84)
+dat$electricity <- rep(variableData$`% of households with access to electricity`,each=84)
+dat$sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=84)
+dat$median_educ <- rep(variableData$`Median years of education completed by female household membe aged 15-49r.`,each=84)
+dat$literacy <- rep(variableData$`% of women who can read a whole sentence`,each=84)
+dat$median_age_sex <- rep(variableData$`Median age of first sexual intercourse among women 20-49`,each=84)
+dat$median_age_birth <- rep(variableData$`Median age at first birth in women aged 20-49`,each=84)
+dat$perc_live_birth <- rep(variableData$`% of women aged 15-19 who have had a live birth`,each=84)
+dat$polygamy <- rep(variableData$`% of currently married men with one or more co-wives`,each=84)
 dat$employed <- rep(variableData$`% of women employed in the 12 months
-preceding the survey`,each=72)
-dat$demand_condom <- rep(variableData$`% who can ask their husband to use a condom`,each=72)
-dat$neg_sex_rel <- rep(variableData$`% of women who can negotiate sexual relations`,each=72)
-dat$STI <- rep(variableData$`% of women who reported having an STI in last 12 months`,each=72)
-dat$men_condom <- rep(variableData$`% of men using condoms`,each=72)
-dat$sex_one_partner <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=72)
-dat$paid_sex <- rep(variableData$`% of men who have ever paid for sexual intercourse`,each=72)
-dat$women_more_sexPpartners <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=72)
-dat$women_HIV_pos <- rep(variableData$`Percentage women  HIV positive`,each=72)
-dat$hosp_deliv <- rep(variableData$`% delivered in a health facility`,each=72)
-dat$blood_sample_ANC <- rep(variableData$`% who had a blood sample taken during ANC`,each=72)
-dat$nopostnatal_check <- rep(variableData$`% with no post-natal check within 2 days of birth`,each=72)
-dat$facility_deliv <- rep(variableData$`% delivered in a health facility`,each=72)
-dat$skilled_ANC <- rep(variableData$`% receiving Anc from a skilled provider`,each=72)
-dat$no_ANC <- rep(variableData$`% who received no ANC`,each=72)
-dat$problem_health_care <- rep(variableData$`% of women who reported at least  one problem accessing health care`,each=72)
-dat$TFR <- rep(variableData$`Total fertility rate`,each=72)
-dat$HTC_ANC <- rep(variableData2$`% of women who received HIV testing and counselling during ANC and delivery`,each=72)
-dat$med_months_lastBirth <- rep(variableData2$`Median number of months since last birth`,each=72)
-dat$low_BMI <- rep(variableData2$`% of women with BMI<18.5`,each=72)
-dat$severe_anaemia <- rep(variableData2$`% of women with severe anaemia`,each=72)
-dat$past_sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=72)
+preceding the survey`,each=84)
+dat$demand_condom <- rep(variableData$`% who can ask their husband to use a condom`,each=84)
+dat$neg_sex_rel <- rep(variableData$`% of women who can negotiate sexual relations`,each=84)
+dat$STI <- rep(variableData$`% of women who reported having an STI in last 12 months`,each=84)
+dat$men_condom <- rep(variableData$`% of men using condoms`,each=84)
+dat$sex_one_partner <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=84)
+dat$paid_sex <- rep(variableData$`% of men who have ever paid for sexual intercourse`,each=84)
+dat$women_more_sexPpartners <- rep(variableData$`% of women aged 15-24 who had 1+ sexual partners in last 12 months`,each=84)
+dat$women_HIV_pos <- rep(variableData$`Percentage women  HIV positive`,each=84)
+dat$hosp_deliv <- rep(variableData$`% delivered in a health facility`,each=84)
+dat$blood_sample_ANC <- rep(variableData$`% who had a blood sample taken during ANC`,each=84)
+dat$nopostnatal_check <- rep(variableData$`% with no post-natal check within 2 days of birth`,each=84)
+dat$facility_deliv <- rep(variableData$`% delivered in a health facility`,each=84)
+dat$skilled_ANC <- rep(variableData$`% receiving Anc from a skilled provider`,each=84)
+dat$no_ANC <- rep(variableData$`% who received no ANC`,each=84)
+dat$problem_health_care <- rep(variableData$`% of women who reported at least  one problem accessing health care`,each=84)
+dat$TFR <- rep(variableData$`Total fertility rate`,each=84)
+dat$HTC_ANC <- rep(variableData2$`% of women who received HIV testing and counselling during ANC and delivery`,each=84)
+dat$med_months_lastBirth <- rep(variableData2$`Median number of months since last birth`,each=84)
+dat$low_BMI <- rep(variableData2$`% of women with BMI<18.5`,each=84)
+dat$severe_anaemia <- rep(variableData2$`% of women with severe anaemia`,each=84)
+dat$past_sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=84)
+
 
 ## compute the total number of women
 
-dat$allwomen <- rowSums(dat[,c("anc_vst1","anc_vst2","anc_vst3","anc_vst4","anc_vst5")])
+#dat$allwomen <- rowSums(dat[,c("anc_vst1","anc_vst2","anc_vst3","anc_vst4","anc_vst5")])
+dat$allwomen <- dat$anc_vst1
+dat$allbirths <- dat$numbabies
 dat$prev <- dat$syphpos/dat$allwomen*1000
+dat$syphPrev <- dat$syphpos/dat$allbirths*100 #revise prevalence calculation 
+# coverage hmis
+#dat$hmisCoverage <- (dat$syphpos + dat$syphneg)/dat$allwomen
+
+dat$syphlisTestingCoverage <- (dat$syphpos + dat$syphneg)/dat$allwomen 
+
+dat$testCov <- (dat$syphpos + dat$syphneg)/dat$anc_vst1 # more strict measure
+dat$testCovTotal <- (dat$syphpos + dat$syphneg)/dat$allbirths # testing coverage to be used in the model
+
 # exploratory analysis
 # map raw numbers of positive cases per district
 ntime <- length(unique(dat$month))
@@ -77,7 +92,7 @@ casesDistr <- dat %>%
   summarise(totalCases = sum(syphpos,na.rm = TRUE),
             prevdistr = mean(prev,na.rm = TRUE))
 
-## map the total nuumber of cases per district
+## map the total number of cases per district
 tiff("images/malawi_syphilisPos.tif",width = (25*0.39),height = (35*0.39),units = "in",res = 350,compression = "lzw")
 par(mfrow=c(1,1),mar=c(2,2,2,2))
 mwdistr$syph <- casesDistr$prevdistr
@@ -95,26 +110,20 @@ legend("bottomleft",
 box(lwd=1,bty="o")
 dev.off()
 
-## plot overal changes in cases over time
-casesTime <- dat %>%
-  group_by(month) %>%
-  summarise(syphprev = mean(dat,na.rm = T))
-
-### calculate average incidence over time
 
 ## yearly syphilis prevalence
 
 # Average monthly prevalence -- national level estimates
 nx <- unique(dat$month)
 syphprev <- c()
-for( i in 1:length(nx)){
+for(i in 1:length(nx)){
   syphprev[i] <- sum(dat$syphpos[dat$month==i],na.rm = T)/sum(dat$allwomen[dat$month==i],na.rm=T)*100
 }
 
 tiff("images/national_prevelence.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 350,compression = "lzw")
 par(mfrow=c(1,1),mar=c(4.5,4.5,2,2),cex.lab=1.5,cex.axis=1.5)
 plot(1:ntime,syphprev,type="l",lwd=1.5,axes=F,xlab="Year",ylab="Prevalence (%)")
-axis(1,at=seq(1,ntime,12),labels = 2014:2019)
+axis(1,at=seq(1,ntime,12),labels = 2014:2020)
 axis(2,lwd = 1)
 box(lwd=1,bty="o")
 dev.off()
@@ -123,13 +132,13 @@ dev.off()
 Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
   newdata <- dat[dat$distcode==districtCode,]
   newdataSeries <- rep(NA,timeLen)
-  for( i in 1:timeLen ){
-    newdataSeries[i] <- sum(newdata$syphpos[newdata$month==i],na.rm = T)/(sum(newdata$allwomen[newdata$month==i],na.rm=T))*100
+  for(i in 1:timeLen){
+    newdataSeries[i] <- sum(newdata$syphpos[newdata$month==i],na.rm = T)/(sum(newdata$allwomen[newdata$month==i],na.rm=T))*100 # edit demoninator
   }
   par(cex.lab=1.5,cex.axis=1.5,mar=c(4,4.5,2,2))
   plot(1:timeLen,newdataSeries,type='l',col="black",lwd=1.5,xlab="Year",ylab="Prevalence (%)", ylim=c(0,8),axes=F)
   box(lwd=1,bty="o")
-  axis(1,at=seq(1,ntime,12),labels=2014:2019,lwd=1)
+  axis(1,at=seq(1,ntime,12),labels=2014:2020,lwd=1)
   axis(2,lwd = 1)
   mtext(plotLabel,side = 2,line = 1,cex = 1.7,at=ymark,0,las=2)
 }
@@ -152,28 +161,100 @@ for(i in 1:15){
 }
 dev.off()
 
+## calculate the expected number of cases
+dat$overallProb <- sum(dat$syphpos,na.rm = T)/sum(dat$allwomen,na.rm = T) # change denominator
+dat$expectedCases <- ceiling(dat$overallProb * dat$allwomen)
+dat$smr <- dat$syphpos/dat$expectedCases
+
+# summarize and plot smr
+smrData <- dat %>%
+  group_by(year) %>%
+  summarise(smrYear = mean(smr,na.r=T))
+plot(smrData$year,smrData$smrYear,type="l",xlab="",ylab="SMR",lwd=2)
+
+# summarize smr by month
+smrDataMonth <- dat %>%
+  group_by(month) %>%
+  summarise(smrMonth = mean(smr,na.r=T))
+
+# summarize smr by district
+smrDistrict <- dat %>%
+  group_by(district) %>%
+  summarise(smrAvg = sum(syphpos,na.rm = T)/sum(expectedCases,na.rm = T))
+
+tiff("images/malawi_syphilis_SMR_month.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 350,compression = "lzw")
+par(mfrow=c(1,1),cex.lab=1.5,cex.axis=1.5)
+plot(1:ntime,smrDataMonth$smrMonth,type="l",axes=F,xlab="",ylab="SMR")
+axis(1,at=seq(1,ntime,7),labels = month.abb)
+axis(2,lwd=1)
+abline(h=1,lty=2)
+box(lwd=1,bty="o")
+dev.off()
+
+#SMR=rep(NA,28)
+#for(i in 1:28){
+#  SMR[i]=sum(dat$syphpos[dat$district==i],na.rm=T)/sum(dat$expectedCases[dat$district==i],na.rm=T)
+#}
+
+## plot distribution of smr values
+tiff("images/malawi_syphilis_SMR.tif",width = (25*0.39),height = (35*0.39),units = "in",res = 350,compression = "lzw")
+par(mfrow=c(1,1),mar=c(2,2,2,2))
+mwdistr$SMR <- smrDistrict$smrAvg
+brks <- c(0,0.5,1.0,1.5,2.0,2.5,3.0)
+cols <- colorRampPalette(c("#eafaf1","#fcf3cf","#f9e79f","#dc7633"))(7)
+plot(mwdistr)
+plot(lakes,add=TRUE,col="lightblue")
+plot(mwdistr,col=cols[findInterval(mwdistr$SMR,brks)],add=TRUE)
+legend("bottomleft",
+       legend = leglabs(brks,"<",">="),
+       fill = cols,
+       bty = "n",
+       pt.cex = 1,
+       cex = 2)
+degAxis(side = 1)
+degAxis(side = 2)
+box(lwd=1,bty="o")
+dev.off()
 
 ### map syphilis prevelence among the women cohort ####
 
-
-G <- dat %>%
+prev.summ <- dat %>%
   group_by(district) %>%
   summarise(y1 = sum(syphpos[year==2014],na.rm = T)/sum(allwomen[year==2014],na.rm = T)*100,
             y2 = sum(syphpos[year==2015],na.rm = T)/sum(allwomen[year==2015],na.rm = T)*100,
             y3 = sum(syphpos[year==2016],na.rm = T)/sum(allwomen[year==2016],na.rm = T)*100,
             y4 = sum(syphpos[year==2017],na.rm = T)/sum(allwomen[year==2017],na.rm = T)*100,
             y5 = sum(syphpos[year==2018],na.rm = T)/sum(allwomen[year==2018],na.rm = T)*100,
-            y6 = sum(syphpos[year==2019],na.rm = T)/sum(allwomen[year==2019],na.rm = T)*100)
+            y6 = sum(syphpos[year==2019],na.rm = T)/sum(allwomen[year==2019],na.rm = T)*100,
+            y7 = sum(syphpos[year==2020],na.rm = T)/sum(allwomen[year==2020],na.rm = T)*100)
 ## map prevelence by distric and time 
+# add prev to spatialPointsData
+mwdistr$prev2014 <- prev.summ$y1
+mwdistr$prev2015 <- prev.summ$y2
+mwdistr$prev2016 <- prev.summ$y3
+mwdistr$prev2017 <- prev.summ$y4
+mwdistr$prev2018 <- prev.summ$y5
+mwdistr$prev2019 <- prev.summ$y6
+mwdistr$prev2020 <- prev.summ$y7
 
-mwdistr$prev2014 <- G$y1
-mwdistr$prev2015 <- G$y2
-mwdistr$prev2016 <- G$y3
-mwdistr$prev2017 <- G$y4
-mwdistr$prev2018 <- G$y5
-mwdistr$prev2019 <- G$y6
-
-
+# map yearly smr rates
+smrYear <- dat %>%
+  group_by(district) %>%
+  summarise(yr1 = sum(syphpos[year==2014],na.rm = T)/sum(expectedCases[year==2014],na.rm = T),
+            yr2 = sum(syphpos[year==2015],na.rm = T)/sum(expectedCases[year==2015],na.rm = T),
+            yr3 = sum(syphpos[year==2016],na.rm = T)/sum(expectedCases[year==2016],na.rm = T),
+            yr4 = sum(syphpos[year==2017],na.rm = T)/sum(expectedCases[year==2017],na.rm = T),
+            yr5 = sum(syphpos[year==2018],na.rm = T)/sum(expectedCases[year==2018],na.rm = T),
+            yr6 = sum(syphpos[year==2019],na.rm = T)/sum(expectedCases[year==2019],na.rm = T),
+            yr7 = sum(syphpos[year==2020],na.rm = T)/sum(expectedCases[year==2020],na.rm = T))
+# add smr to spatialPointsDataFrame
+mwdistr$smr2014 <- smrYear$yr1
+mwdistr$smr2015 <- smrYear$yr2
+mwdistr$smr2016 <- smrYear$yr3
+mwdistr$smr2017 <- smrYear$yr4
+mwdistr$smr2018 <- smrYear$yr5
+mwdistr$smr2019 <- smrYear$yr6
+mwdistr$smr2020 <- smrYear$yr7
 
 ##### create a function to plot the prevalennce for multiple years
 ##### function uses the data from the data frame G summarized above 
@@ -188,11 +269,14 @@ plot.syphilis.yearly.prevelence <- function(year){
     x <- "prev2017"
   } else if (year==2018){
     x <- "prev2018"
-  } else {
+  } else if (year==2019){
     x <- "prev2019"
+  } else {
+    x <- "prev2020"
   }
-  brks <- c(0.5,1,1.5,2,2.5,3,4)
-  mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
+  brks <- c(0.5,1,1.5,2,2.5,3,4,4.5,5,5.5)
+  #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
+  mycol <- colorRampPalette(c("#f5eef8","#6c3483"))(length(brks))
   plot(mwdistr)
   plot(lakes,add=T,col="lightblue")
   plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
@@ -205,44 +289,56 @@ plot.syphilis.yearly.prevelence <- function(year){
   box(lwd=1,bty="o")
 }
 
-tiff("images/prevelence_year.tif",width = 35*0.39,height = 25*0.39,units = "in",res = 350,compression = "lzw")
-par(mfrow=c(2,3),mar=c(2,2,2,2))
-for(i in 2014:2019){
+# plot yearly prevalence
+tiff("images/prevelence_year.tif",width = 35*0.39,height = 25*0.39,units = "in",res = 450,compression = "lzw")
+par(mfrow=c(2,4),mar=c(2,2,2,2))
+for(i in 2014:2020){
   plot.syphilis.yearly.prevelence(i)
   title(main=i)
+}
+dev.off()
+
+# plot yearly smr
+tiff("images/yearly_SMR.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(2,4),mar=c(2,2,2,2))
+for(i in 2014:2020){
+  plot.syphilis.yearly.smr(year=i)
+  title(main = i)
 }
 dev.off()
 
 ## compute coverages ##
 testcov <- c()
 for(i in 1:ntime){
-  testcov[i] <- 100-sum(dat$syphunk[dat$month==i],na.rm = T)/sum(dat$allwomen[dat$month==i],na.rm = T)*100
+  testcov[i] <- 100-sum(dat$syphunk[dat$month==i],na.rm = T)/sum(dat$allwomen[dat$month==i],na.rm = T)*100 # change denominator
 }
 tiff("images/testingCoverage.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 350,compression = "lzw")
 par(mfrow=c(1,1),mar=c(4.5,4.5,2,2),cex.lab=1.5,cex.axis=1.5)
 plot(1:ntime,testcov,type="l",lwd=1.5,axes=F,xlab="Year",ylab="Coverage of testing (%)")
-axis(1,at=seq(1,ntime,12),labels = 2014:2019)
+axis(1,at=seq(1,ntime,12),labels = 2014:2020)
 axis(2,lwd = 1)
 box(lwd=1,bty="o")
 dev.off()
 
 ## summarize coverage by year
-U <- dat %>%
+test.cov.yr <- dat %>%
   group_by(district) %>%
   summarise(y1 = sum(syphunk[year==2014],na.rm = T)/sum(allwomen[year==2014],na.rm = T),
             y2 = sum(syphunk[year==2015],na.rm = T)/sum(allwomen[year==2015],na.rm = T),
             y3 = sum(syphunk[year==2016],na.rm = T)/sum(allwomen[year==2016],na.rm = T),
             y4 = sum(syphunk[year==2017],na.rm = T)/sum(allwomen[year==2017],na.rm = T),
             y5 = sum(syphunk[year==2018],na.rm = T)/sum(allwomen[year==2018],na.rm = T),
-            y6 = sum(syphunk[year==2019],na.rm = T)/sum(allwomen[year==2019],na.rm = T))
+            y6 = sum(syphunk[year==2019],na.rm = T)/sum(allwomen[year==2019],na.rm = T),
+            y7 = sum(syphunk[year==2020],na.rm = T)/sum(allwomen[year==2020],na.rm = T))
 ## plot testing coverage at different time points
 
-mwdistr$y1cov <- (1-U$y1)*100
-mwdistr$y2cov <- (1-U$y2)*100
-mwdistr$y3cov <- (1-U$y3)*100
-mwdistr$y4cov <- (1-U$y4)*100
-mwdistr$y5cov <- (1-U$y5)*100
-mwdistr$y6cov <- (1-U$y6)*100
+mwdistr$y1cov <- (1-test.cov.yr$y1)*100
+mwdistr$y2cov <- (1-test.cov.yr$y2)*100
+mwdistr$y3cov <- (1-test.cov.yr$y3)*100
+mwdistr$y4cov <- (1-test.cov.yr$y4)*100
+mwdistr$y5cov <- (1-test.cov.yr$y5)*100
+mwdistr$y6cov <- (1-test.cov.yr$y6)*100
+mwdistr$y7cov <- (1-test.cov.yr$y7)*100
 
 
 plot.syphilis.testing.coverage <- function(year){
@@ -256,10 +352,12 @@ plot.syphilis.testing.coverage <- function(year){
     x <- "y4cov"
   } else if (year==2018){
     x <- "y5cov"
-  } else {
+  } else if (year==2019){
     x <- "y6cov"
+  } else {
+    x <- "y7cov"
   }
-  brks <- c(10,20,30,40,50,60,70,80,90)
+  brks <- c(40,50,60,70,80,90)
   cols <- colorRampPalette(rev(c("gold","yellow","green")))(9)
   plot(mwdistr)
   plot(lakes,add=T,col="lightblue")
@@ -273,8 +371,8 @@ plot.syphilis.testing.coverage <- function(year){
   box(lwd=1,bty="o")
 }
 tiff("images/testing_coverages_years.tif",width = 35*0.39,height = 25*0.29,units = "in",res = 350,compression = "lzw")
-par(mfrow=c(2,3),mar=c(2,2,2,2))
-for(i in c(2014:2019)){
+par(mfrow=c(2,4),mar=c(2,2,2,2))
+for(i in c(2014:2020)){
   plot.syphilis.testing.coverage(year = i)
   title(main=i)
 }
@@ -317,11 +415,11 @@ for(i in 1:ntime){
 ### plot syphilis prevalence, prematurity and under weight 
 tiff("images/syphilis_underweight.tif",width = (30*0.39),height = (20*0.39),units = "in",res = 350,compression = "lzw")
 par(mfrow=c(1,1),mar=c(4.5,4.5,2,4.5),cex.lab=1.5,cex.axis=1.5)
-plot(1:ntime,syphprev,type="l",lwd=2,axes=F,xlab="Year",ylab="Prevelence (%)",col="red")
-axis(1,at=seq(1,ntime,12),labels = 2014:2019)
+plot(1:ntime,syphprev,type="l",lwd=2,axes=F,xlab="Year",ylab="Prevelence (%)",col="#F08080")
+axis(1,at=seq(1,ntime,12),labels = 2014:2020)
 axis(2,lwd = 1)
 par(new=T)
-plot(1:ntime,newbornUwt,type="l",lwd=2,xlab=NA,ylab=NA,axes=F,col="blue")
+plot(1:ntime,newbornUwt,type="l",lwd=2,xlab=NA,ylab=NA,axes=F,col="#bb8fce")
 axis(4,at=seq(1,10,1),lwd = 1.5)
 mtext("Underweight (%)",side = 4,line = 2.8,cex = 1.5)
 box(lwd=1.5,bty="o")
@@ -329,7 +427,7 @@ legend("topleft",
        legend = c("Syphilis","Underweight"),
        lty = c(1,1),
        lwd = c(2,2),
-       col = c("red","blue"),
+       col = c("#F08080","#bb8fce"),
        bty = "n",
        pt.cex = 1,
        cex = 2)
@@ -401,42 +499,358 @@ dev.off()
 
 ## add coverage the data frame
 dat$covrge <- 1-dat$syphunk/dat$allwomen
-dat$borderDistr <- ifelse(dat$district %in% c("ntcheu","dedza","mulanje","mzimba","kasungu","machinga","mchinji","nsanje","phalombe","chikwawa","mangochi","chitipa"),1,0)
-# add population density
+#dat$borderDistr <- ifelse(dat$district %in% c("ntcheu","dedza","mulanje","mzimba","kasungu","machinga","mchinji","nsanje","phalombe","chikwawa","mangochi","chitipa"),1,0)
 
-m1 <- glm(syphpos ~ offset(log(allwomen))+covrge + borderDistr,data = dat,family = poisson())
+#############################################################################################
+################################ question one ###############################################
+## Question 1: Are there any population characteristics associated with geographical differences in syphilis prevalence ##
+
+# non-spatial model
+m1 <- glm(syphpos ~ offset(log(expectedCases)) +
+            sec_educ + literacy + employed + perc_live_birth + median_age_sex+
+            median_age_birth +women_more_sexPpartners+polygamy + men_condom + paid_sex + women_HIV_pos+
+            STI + improved_sanit + improved_water + electricity + skilled_ANC +no_ANC + problem_health_care + nopostnatal_check + facility_deliv,
+          data = dat,family = quasipoisson())
 summary(m1)
 exp(cbind(IRR=coef(m1),CI=confint(m1)))
+
+m2 <- glm(syphpos ~ offset(log(expectedCases)) + employed+
+            sec_educ + syphlisTestingCoverage  + electricity +
+            median_age_birth +women_more_sexPpartners + women_HIV_pos,
+          data = dat,family = poisson())
+summary(m2)
+exp(cbind(IRR=coef(m2),CI=confint(m2)))
+
+
+m3 <- glm(syphpos ~ offset(log(expectedCases)) + sec_educ + testCov + no_ANC,
+          data = dat,family = quasipoisson())
+summary(m3)
+exp(cbind(IRR=coef(m3),CI=confint(m3)))
+
+# reduced preliminary model with only key risk factors
+m4 <- glm(syphpos ~ offset(log(expectedCases)) + sec_educ + testCov + no_ANC + women_more_sexPpartners,problem_health_care + women_HIV_pos,
+          data = dat,family = quasipoisson())
+summary(m4)
+exp(cbind(IRR=coef(m4),CI=confint(m4)))
 
 
 ### regression modelling for lattice data n- spatio-temporal modelling ### 
 ### CAR models 
 
-### create adjacency matrix for malawi
-malawiadj <- poly2nb(mwdistr,queen = F)
-adjMat <- nb2mat(malawiadj,style = "B",zero.policy = T)
-adjMat <- as(adjMat,"dgTMatrix")
-
-modelFormula <- log(allwomen) + covrge + borderDistr + f(distcod,model = "besag",graph = adjMat)
-m1 <- inla(modelFormula,data = dat)
-
 ### CAR models using CARBayesST
 MWnb <- poly2nb(mwdistr)
 mwMat <- nb2mat(MWnb,style = "B", zero.policy = TRUE)
 mwMat <- mwMat[-10,-10] # remove Likoma 
-finaldat <- filter(dat,district != "likoma")
+finaldata <- dat
+finaldata <- filter(dat,district != "likoma")
 
 ## remove missing values
-k = which(is.na(finaldat$allwomen))
-finaldat[k,c("allwomen","district")]
-finaldata2 <- finaldat[-k,]
-## regression model ##
-fit1 <- ST.CARanova(syphpos ~ log(allwomen) + healthFac + urbanpop + borderDistr,
+
+finaldata$syphpos[is.na(finaldata$syphpos)] <- floor(mean(finaldata$syphpos,na.rm=TRUE))
+finaldata$expectedCases[is.na(finaldata$expectedCases)] <- mean(finaldata$expectedCases,na.rm=TRUE)
+finaldata$TFR[is.na(finaldata$TFR)] <- mean(finaldata$TFR,na.rm=TRUE)
+finaldata$syphlisTestingCoverage[is.na(finaldata$syphlisTestingCoverage)] <- mean(finaldata$syphlisTestingCoverage,na.rm=TRUE)
+# process additional covariates
+
+formula <- syphpos ~ offset(log(expectedCases)) + employed+ sec_educ + syphlisTestingCoverage  + electricity +
+  median_age_birth +women_more_sexPpartners + women_HIV_pos
+
+formula2 <- syphpos ~ offset(log(expectedCases)) + syphlisTestingCoverage 
+
+set.seed(0012)
+fit1 <- ST.CARanova(formula = formula,
                   family = "poisson",
-                  data = finaldat, 
+                  data = finaldata, 
                   W=mwMat,
-                  burnin = 1000,
-                  n.sample = 5000,
-                  thin = 50)
-summary(fit1)
+                  burnin = 3000,
+                  n.sample = 500000,
+                  thin = 50,
+                  verbose = TRUE)
+#summary(fit1)
 print(fit1)
+colnames(fit1$samples$beta) <- c("Intercept","employed","Education","Testing coverage","electricity","Age birth","Sex partners","HIV positive")
+plot(exp(fit1$samples$beta[,-1]))
+
+fit2 <- ST.CARanova(formula = formula2,
+                    family = "poisson",
+                    data = finaldata, 
+                    W=mwMat,
+                    burnin = 3000,
+                    n.sample = 200000,
+                    thin = 100,
+                    verbose = TRUE)
+print(fit2)
+# summarise output to get rate ratios
+colnames(fit2$samples$beta) <- c("Intercept","Testing coverage")
+plot(exp(fit2$samples$beta[,-1]))
+
+
+# model diagnostics
+plot.ecdf(ecdf(fit1$samples$beta[,2][1:2950])) # border
+lines(ecdf(fit1$samples$beta[,2][2951:5900]))
+
+# function to plot ecdf
+plot_ecdf_diagnostics <- function(modelFit,varpos,midpt,nSample){
+  ecdfLower <- ecdf(modelFit$samples$beta[,varpos][1:midpt])
+  ecdfUpper <- ecdf(modelFit$samples$beta[,varpos][midpt+1:nSample])
+  plot(ecdfLower,col="black",lwd=2)
+  lines(ecdfUpper,col="red",lwd=2)
+  legend("topleft",legend = c("Lower","Upper"),
+         lwd = c(2,2),
+         pt.cex = 1,
+         cex = 2,
+         col = c("black","red"),
+         bty = "n")
+}
+plot_ecdf_diagnostics(modelFit = fit1,varpos = 2,midpt = 249975,nSample = 499950)
+
+# incident rate ratios
+params <- summarise.samples(exp(fit1$samples$beta[,-1]),quantiles = c(0.5,0.025,0.975))
+round(params$quantiles,2)
+
+# map fitted values
+betas <- fit1$samples$beta
+phis <- fit1$samples$phi # spatial 
+deltas <- fit1$samples$delta # temporal
+intrx <- fit1$samples$gamma # interaction
+betaMeans <- apply(betas,2,mean)
+phiMeans <- apply(phis,2,mean)
+deltaMeans <- apply(deltas,2,mean)
+gammaMeans <- apply(intrx,2,mean)
+
+# lower quantiles
+betaLower <- apply(betas,2,function(x)quantile(x,0.025))
+phiLower <- apply(phis,2,function(x)quantile(x,0.025))
+deltaLower <- apply(deltas,2,function(x)quantile(x,0.025))
+gammaLower <- apply(intrx,2,function(x)quantile(x,0.025))
+
+# upper quantiles
+betaUpper <- apply(betas,2,function(x)quantile(x,0.975))
+phiUpper <- apply(phis,2,function(x)quantile(x,0.975))
+deltaUpper <- apply(deltas,2,function(x)quantile(x,0.975))
+gammaUpper <- apply(intrx,2,function(x)quantile(x,0.975))
+
+# covariate values
+employed <- finaldata$employed
+educ <- finaldata$sec_educ
+testing.cov <- finaldata$syphlisTestingCoverage
+electricity <- finaldata$electricity
+age.birth <- finaldata$median_age_birth
+sex.partners <- finaldata$women_more_sexPpartners
+hivpos <- finaldata$women_HIV_pos
+
+# calculate overall risk across districts
+finaldata$r_st <- exp(betaMeans[1]+
+              betaMeans[2]*employed+
+              betaMeans[3]*educ+
+              betaMeans[4]*testing.cov+
+              betaMeans[5]*electricity+
+              betaMeans[6]*age.birth+
+              betaMeans[7]*sex.partners+
+              betaMeans[8]*hivpos+
+              phiMeans+deltaMeans+gammaMeans)
+# lower quantile risk
+finaldata$r_st_lower <- exp(betaLower[1]+
+                              betaLower[2]*employed+
+                              betaLower[3]*educ+
+                              betaLower[4]*testing.cov+
+                              betaLower[5]*electricity+
+                              betaLower[6]*age.birth+
+                              betaLower[7]*sex.partners+
+                              betaLower[8]*hivpos+
+                              phiMeans+deltaMeans+gammaMeans)
+# upper quantile risk
+finaldata$r_st_upper <- exp(betaUpper[1]+
+                              betaUpper[2]*employed+
+                              betaUpper[3]*educ+
+                              betaUpper[4]*testing.cov+
+                              betaUpper[5]*electricity+
+                              betaUpper[6]*age.birth+
+                              betaUpper[7]*sex.partners+
+                              betaUpper[8]*hivpos+
+                              phiMeans+deltaMeans+gammaMeans)
+
+plotData <- finaldata %>%
+  group_by(district) %>%
+  summarise(avgIRR = mean(r_st,na.rm=TRUE)) %>%
+  add_row(district="likoma",avgIRR=NA,.after = 9)
+
+mwdistr$avgIRR <- plotData$avgIRR
+brks <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4)
+cols <- colorRampPalette(c("#eafaf1","#fcf3cf","#f9e79f","#dc7633"))(length(brks))
+plot(mwdistr)
+plot(lakes,add=TRUE,col="lightblue")
+plot(mwdistr,col=cols[findInterval(mwdistr$avgIRR,brks)],add=TRUE)
+legend("bottomleft",
+       legend = leglabs(brks,"<",">="),
+       fill = cols,
+       bty = "n",
+       pt.cex = 1,
+       cex = 2)
+box(lwd=1,bty="o")
+
+## plot yearly estimates
+estimYear <- finaldata %>%
+  group_by(district) %>%
+  summarise(irr_2014 = mean(r_st[year==2014],na.rm=TRUE),
+            irr_2015 = mean(r_st[year==2015],na.rm=TRUE),
+            irr_2016 = mean(r_st[year==2016],na.rm=TRUE),
+            irr_2017 = mean(r_st[year==2017],na.rm=TRUE),
+            irr_2018 = mean(r_st[year==2018],na.rm=TRUE),
+            irr_2019 = mean(r_st[year==2019],na.rm=TRUE),
+            irr_2020 = mean(r_st[year==2020],na.rm=TRUE)) %>%
+  add_row(district="likoma",irr_2014=NA,irr_2015=NA,irr_2016=NA,irr_2017=NA,irr_2018=NA,irr_2019=NA,irr_2020=NA,.after = 9)
+## add yearly irr to spatial dataframe
+mwdistr$irr_2014 <- estimYear$irr_2014
+mwdistr$irr_2015 <- estimYear$irr_2015
+mwdistr$irr_2016 <- estimYear$irr_2016
+mwdistr$irr_2017 <- estimYear$irr_2017
+mwdistr$irr_2018 <- estimYear$irr_2018
+mwdistr$irr_2019 <- estimYear$irr_2019
+mwdistr$irr_2020 <- estimYear$irr_2020
+
+tiff("images/yealy_rate_ratios_april.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(3,3),mar=c(2,2,2,2))
+for(i in 2014:2020){
+  plot.yearly.incident.rates(i)
+  title(main = i)
+}
+dev.off()
+
+# temporal trends 
+temporalTrendData <- finaldata %>%
+  group_by(year) %>%
+  summarize(m1 = mean(r_st[month==1],na.rm=T),
+            m2 = mean(r_st[month==2],na.rm=T),
+            m3 = mean(r_st[month==3],na.rm=T))
+nmonth <- 12
+nyear <- 6
+y1_risk <- rep(NA,nmonth)
+for( i in 1:nmonth ){
+  y1_risk[i] <- mean(finaldata$r_st[finaldata$month==i & finaldata$year==2014],na.rm = T)
+}
+
+# create a matrix
+irrMat <- matrix(nrow = nyear,ncol = nmonth)
+for(i in 1:nmonth){
+  for(j in 1:nyear){
+    irrMat[j,i] <- mean(finaldata$r_st[finaldata$year==j & finaldata$month==i])
+  }
+}
+
+filled.contour(x = temporalTrendData$month,y = temporalTrendData$year ,z = temporalTrendData$mean_irr)
+
+x <- 1:dim(M)[1]
+y <- 1:ncol(M)
+filled.contour(x,y,M)
+
+## summary for fit2
+print(fit2)
+colnames(fit2$samples$beta) <- c("Intercept","border","Education","HIMS coverage","TFR","ANC","Sex partners","HC problem","HIV")
+plot(exp(fit2$samples$beta[,-1]))
+
+
+# map fitted values
+betas <- fit2$samples$beta
+phis <- fit2$samples$phi # spatial 
+deltas <- fit2$samples$delta # temporal
+intrx <- fit2$samples$gamma # interaction
+betaMeans <- apply(betas,2,mean)
+phiMeans <- apply(phis,2,mean)
+deltaMeans <- apply(deltas,2,mean)
+gammaMeans <- apply(intrx,2,mean)
+
+# covariate values
+borderVal <- finaldata$borderDistr
+educ <- finaldata$sec_educ
+fty_rate <- finaldata$TFR
+data_cvrg <- finaldata$hmisCoverage
+anc_cvrg <- finaldata$no_ANC
+hc_problem <- finaldata$problem_health_care
+hiv <- finaldata$women_HIV_pos
+sexpartners <- finaldata$women_more_sexPpartners
+
+
+# calculate overall risk across districts
+finaldata$r_st <- exp(betaMeans[1]+
+                        betaMeans[2]*borderVal+
+                        betaMeans[3]*educ+
+                        betaMeans[4]*data_cvrg+
+                        betaMeans[5]*fty_rate+
+                        betaMeans[6]*anc_cvrg+
+                        betaMeans[7]*sexpartners+
+                        betaMeans[8]*hc_problem+
+                        betaMeans[9]*hiv+
+                        phiMeans+deltaMeans+gammaMeans)
+## plot yearly estimates
+estimYear <- finaldata %>%
+  group_by(district) %>%
+  summarise(irr_2014 = mean(r_st[year==2014],na.rm=TRUE),
+            irr_2015 = mean(r_st[year==2015],na.rm=TRUE),
+            irr_2016 = mean(r_st[year==2016],na.rm=TRUE),
+            irr_2017 = mean(r_st[year==2017],na.rm=TRUE),
+            irr_2018 = mean(r_st[year==2018],na.rm=TRUE),
+            irr_2019 = mean(r_st[year==2019],na.rm=TRUE)) %>%
+  add_row(district="likoma",irr_2014=NA,irr_2015=NA,irr_2016=NA,irr_2017=NA,irr_2018=NA,irr_2019=NA,.after = 9)
+## add yearly irr to spatial dataframe
+mwdistr$irr_2014 <- estimYear$irr_2014
+mwdistr$irr_2015 <- estimYear$irr_2015
+mwdistr$irr_2016 <- estimYear$irr_2016
+mwdistr$irr_2017 <- estimYear$irr_2017
+mwdistr$irr_2018 <- estimYear$irr_2018
+mwdistr$irr_2019 <- estimYear$irr_2019
+
+tiff("images/yealy_rate_ratios_fit2.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(2,3),mar=c(2,2,2,2))
+for(i in 2014:2019){
+  plot.yearly.incident.rates(i)
+  title(main = i)
+}
+dev.off()
+
+
+### model analysis
+# incident rate ratios
+params <- summarise.samples(exp(fit2$samples$beta),quantiles = c(0.5,0.025,0.975))
+round(params$quantiles,2)
+# map fitted values
+betas2 <- fit2$samples$beta
+phis2 <- fit2$samples$phi # spatial 
+deltas2 <- fit2$samples$delta # temporal
+intrx2 <- fit2$samples$gamma # interaction
+
+
+betaMeans2 <- apply(betas2,2,mean)
+phiMeans2 <- apply(phis2,2,mean)
+deltaMeans2 <- apply(deltas2,2,mean)
+gammaMeans2 <- apply(intrx2,2,mean)
+
+finaldata$R_st <- exp(betaMeans2[1] + betaMeans2[2]*testing.cov + phiMeans2 +deltaMeans2 + gammaMeans2)
+# yearly predictions
+## plot yearly estimates
+estim.model.two <- finaldata %>%
+  group_by(district) %>%
+  summarise(irr_2014 = mean(R_st[year==2014],na.rm=TRUE),
+            irr_2015 = mean(R_st[year==2015],na.rm=TRUE),
+            irr_2016 = mean(R_st[year==2016],na.rm=TRUE),
+            irr_2017 = mean(R_st[year==2017],na.rm=TRUE),
+            irr_2018 = mean(R_st[year==2018],na.rm=TRUE),
+            irr_2019 = mean(R_st[year==2019],na.rm=TRUE),
+            irr_2020 = mean(R_st[year==2020],na.rm=TRUE)) %>%
+  add_row(district="likoma",irr_2014=NA,irr_2015=NA,irr_2016=NA,irr_2017=NA,irr_2018=NA,irr_2019=NA,irr_2020=NA,.after = 9)
+## add yearly irr to spatial dataframe
+mwdistr$IRR_2014 <- estim.model.two$irr_2014
+mwdistr$IRR_2015 <- estim.model.two$irr_2015
+mwdistr$IRR_2016 <- estim.model.two$irr_2016
+mwdistr$IRR_2017 <- estim.model.two$irr_2017
+mwdistr$IRR_2018 <- estim.model.two$irr_2018
+mwdistr$IRR_2019 <- estim.model.two$irr_2019
+mwdistr$IRR_2020 <- estim.model.two$irr_2020
+
+tiff("images/yealy_rate_ratios_model2.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(2,4),mar=c(2,2,2,2))
+for(i in 2014:2020){
+  plot.yearly.incident.rates(i)
+  title(main = i)
+}
+dev.off()
