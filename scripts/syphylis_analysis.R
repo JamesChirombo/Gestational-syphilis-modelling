@@ -6,10 +6,12 @@ library(RColorBrewer)
 library(viridis)
 library(maptools)
 library(spdep)
-library(INLA)
+#library(INLA)
 library(CARBayesST)
 library(CARBayes)
 library(MASS)
+library(brms)
+library(bayesplot)
 
 ## load required spatial data
 ## malawi districts
@@ -722,19 +724,20 @@ temporalTrendData <- finaldata %>%
   group_by(year) %>%
   summarize(m1 = mean(r_st[month==1],na.rm=T),
             m2 = mean(r_st[month==2],na.rm=T),
-            m3 = mean(r_st[month==3],na.rm=T))
+            m3 = mean(r_st[month==3],na.rm=T),
+            m4 = mean(r_st[month==4],na.rm=T))
 nmonth <- 12
-nyear <- 6
+nyear <- 7
 y1_risk <- rep(NA,nmonth)
 for( i in 1:nmonth ){
-  y1_risk[i] <- mean(finaldata$r_st[finaldata$month==i & finaldata$year==2014],na.rm = T)
+  y1_risk[i] <- mean(finaldata$r_st[finaldata$month==i & finaldata$year==2019],na.rm = T)
 }
 
 # create a matrix
 irrMat <- matrix(nrow = nyear,ncol = nmonth)
 for(i in 1:nmonth){
   for(j in 1:nyear){
-    irrMat[j,i] <- mean(finaldata$r_st[finaldata$year==j & finaldata$month==i])
+    irrMat[j,i] <- mean(finaldata$r_st[finaldata$year==j | finaldata$month==i])
   }
 }
 
@@ -854,3 +857,32 @@ for(i in 2014:2020){
   title(main = i)
 }
 dev.off()
+
+# model using brms
+not_1_car <- brm(bf(total_notif ~ 1 + 
+                      offset(log(population))),
+                 data=dat_scale_ln, 
+                 family=poisson,
+                 control = list(adapt_delta = 0.99, max_treedepth=10),
+                 autocor=cor_car(w4, ~ 1 | scale_cluster_area, type = "icar"),
+                 inits = 0,
+                 #prior = prior_not_1,
+                 cores=3,
+                 iter=15000, warmup=1000,
+                 seed = 1237,
+                 chains=3)
+
+
+fit.brm <- brm(bf(syphpos ~ offset(log(expectedCases)) + employed + sec_educ + syphlisTestingCoverage + electricity + median_age_birth + women_more_sexPpartners + women_HIV_pos),
+               data = finaldata,
+               family = "poisson",
+               data2 = list(W=mwMat,type="icar"),
+               chains = 2,
+               seed = 0112)
+print(fit.brm)
+plot(fit.brm)
+fit.brm$autocor
+educ.samples <- posterior_samples(fit.brm,pars = "sec_educ")
+
+# plot marginal effects
+conditional_effects(fit.brm,effects = "sec_educ")
