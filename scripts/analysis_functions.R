@@ -8,7 +8,7 @@ Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
   par(cex.lab=1.5,cex.axis=1.5,mar=c(4,4.5,2,2))
   plot(1:timeLen,newdataSeries,type='l',col="black",lwd=1.5,xlab="Year",ylab="Prevalence (%)", ylim=c(0,8),axes=F)
   box(lwd=1,bty="o")
-  axis(1,at=seq(1,ntime,12),labels=2014:2019,lwd=1)
+  axis(1,at=seq(1,ntime,12),labels=2014:2020,lwd=1)
   axis(2,lwd = 1)
   mtext(plotLabel,side = 2,line = 1,cex = 1.7,at=ymark,0,las=2)
 }
@@ -129,7 +129,8 @@ plot.yearly.incident.rates <- function(year){
     x <- "irr_2020"
   }
   #brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
-  brks <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4)
+  #brks <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4)
+  brks <- c(0,0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3)
   #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
   mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
   plot(mwdistr)
