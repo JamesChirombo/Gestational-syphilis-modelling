@@ -190,8 +190,13 @@ for(i in 1:15){
 dev.off()
 
 ## calculate the expected number of cases
-dat$overallProb <- sum(dat$syphpos,na.rm = T)/sum(dat$allwomen,na.rm = T) # change denominator
-dat$expectedCases <- ceiling(dat$overallProb * dat$allwomen)
+#dat$overallProb <- sum(dat$syphpos,na.rm = T)/sum(dat$allwomen,na.rm = T) # change denominator
+#dat$expectedCases <- ceiling(dat$overallProb * dat$allwomen)
+#dat$smr <- dat$syphpos/dat$expectedCases
+
+# revise calculation of expected cases
+dat$overallProb <- sum(dat$syphpos,na.rm = T)/sum(dat$women_child_age,na.rm = T) # use population of child bearing age
+dat$expectedCases <- ceiling(dat$overallProb * dat$women_child_age)
 dat$smr <- dat$syphpos/dat$expectedCases
 
 # summarize and plot smr
@@ -226,7 +231,7 @@ dev.off()
 
 ## plot distribution of smr values
 tiff("images/malawi_syphilis_SMR.tif",width = (25*0.39),height = (35*0.39),units = "in",res = 350,compression = "lzw")
-par(mfrow=c(1,1),mar=c(2,2,2,2))
+par(mfrow=c(1,1),mar=c(2,3,2,2),cex.lab=1.4,cex.axis=1.4)
 mwdistr$SMR <- smrDistrict$smrAvg
 brks <- c(0,0.5,1.0,1.5,2.0,2.5,3.0)
 cols <- colorRampPalette(c("#eafaf1","#fcf3cf","#f9e79f","#dc7633"))(7)
@@ -238,7 +243,8 @@ legend("bottomleft",
        fill = cols,
        bty = "n",
        pt.cex = 1,
-       cex = 2)
+       cex = 2,
+       title = "SMR")
 degAxis(side = 1)
 degAxis(side = 2)
 box(lwd=1,bty="o")
@@ -284,6 +290,7 @@ mwdistr$smr2018 <- smrYear$yr5
 mwdistr$smr2019 <- smrYear$yr6
 mwdistr$smr2020 <- smrYear$yr7
 
+
 ##### create a function to plot the prevalennce for multiple years
 ##### function uses the data from the data frame G summarized above 
 plot.syphilis.yearly.prevelence <- function(year){
@@ -313,7 +320,8 @@ plot.syphilis.yearly.prevelence <- function(year){
          fill = mycol,
          bty = "n",
          pt.cex = 1,
-         cex = 1)
+         cex = 1,
+         title = "Prevalence (%)")
   box(lwd=1,bty="o")
 }
 
@@ -534,33 +542,36 @@ dat$covrge <- 1-dat$syphunk/dat$allwomen
 ## Question 1: Are there any population characteristics associated with geographical differences in syphilis prevalence ##
 
 # non-spatial model
-m1 <- glm(syphpos ~ offset(log(women_child_age)) +
+m1 <- glm(syphpos ~ offset(log(expectedCases)) +
             sec_educ + literacy + employed + perc_live_birth + median_age_sex+
             median_age_birth +women_more_sexPpartners+polygamy + men_condom + paid_sex + women_HIV_pos+
             STI + improved_sanit + improved_water + electricity + skilled_ANC +no_ANC + problem_health_care + nopostnatal_check + facility_deliv,
-          data = dat,family = quasipoisson())
+          data = dat,family = poisson())
 summary(m1)
 exp(cbind(IRR=coef(m1),CI=confint(m1)))
 
-m2 <- glm(syphpos ~ offset(log(women_child_age)) + employed+
+m2 <- glm(syphpos ~ offset(log(expectedCases)) + employed+
             sec_educ + syphlisTestingCoverage  + electricity +
             median_age_birth +women_more_sexPpartners + women_HIV_pos,
           data = dat,family = poisson())
 summary(m2)
 exp(cbind(IRR=coef(m2),CI=confint(m2)))
+AIC(m2)
 
-
-m3 <- glm(syphpos ~ offset(log(women_child_age)) + sec_educ + testCov + no_ANC,
-          data = dat,family = quasipoisson())
+m3 <- glm(syphpos ~ offset(log(expectedCases)) + sec_educ + testCov + no_ANC,
+          data = dat,family = poisson())
 summary(m3)
 exp(cbind(IRR=coef(m3),CI=confint(m3)))
+AIC(m3)
 
 # reduced preliminary model with only key risk factors
-m4 <- glm(syphpos ~ offset(log(women_child_age)) + sec_educ + testCov + no_ANC + women_more_sexPpartners,problem_health_care + women_HIV_pos,
+m4 <- glm(syphpos ~ offset(log(expectedCases)) + sec_educ + testCov + no_ANC + women_more_sexPpartners,problem_health_care + women_HIV_pos,
           data = dat,family = quasipoisson())
 summary(m4)
 exp(cbind(IRR=coef(m4),CI=confint(m4)))
 
+m5 <- glm(formula,data = dat,family = poisson())
+AIC(m5)
 
 ### regression modelling for lattice data n- spatio-temporal modelling ### 
 ### CAR models 
@@ -580,8 +591,8 @@ finaldata$TFR[is.na(finaldata$TFR)] <- mean(finaldata$TFR,na.rm=TRUE)
 finaldata$syphlisTestingCoverage[is.na(finaldata$syphlisTestingCoverage)] <- mean(finaldata$syphlisTestingCoverage,na.rm=TRUE)
 # process additional covariates
 
-formula <- syphpos ~ offset(log(women_child_age)) + employed+ sec_educ + syphlisTestingCoverage  + electricity +
-  median_age_birth +women_more_sexPpartners + women_HIV_pos
+
+formula <- syphpos ~ offset(log(expectedCases)) + employed+ sec_educ + syphlisTestingCoverage  + electricity +median_age_birth +women_more_sexPpartners + women_HIV_pos
 
 
 set.seed(0012)
@@ -683,9 +694,11 @@ finaldata$r_st_upper <- exp(betaUpper[1]+
                               betaUpper[8]*hivpos+
                               phiMeans+deltaMeans+gammaMeans)
 
+finaldata$fitted_values <- fit1$fitted.values # fitted observed cases
+finaldata$fit_smr <- finaldata$fitted_values/finaldata$expectedCases
 plotData <- finaldata %>%
   group_by(district) %>%
-  summarise(avgIRR = mean(r_st,na.rm=TRUE)) %>%
+  summarise(avgIRR = mean(fit_smr,na.rm=TRUE)) %>%
   add_row(district="likoma",avgIRR=NA,.after = 9)
 
 mwdistr$avgIRR <- plotData$avgIRR
@@ -705,13 +718,13 @@ box(lwd=1,bty="o")
 ## plot yearly estimates
 estimYear <- finaldata %>%
   group_by(district) %>%
-  summarise(irr_2014 = mean(r_st[year==2014],na.rm=TRUE),
-            irr_2015 = mean(r_st[year==2015],na.rm=TRUE),
-            irr_2016 = mean(r_st[year==2016],na.rm=TRUE),
-            irr_2017 = mean(r_st[year==2017],na.rm=TRUE),
-            irr_2018 = mean(r_st[year==2018],na.rm=TRUE),
-            irr_2019 = mean(r_st[year==2019],na.rm=TRUE),
-            irr_2020 = mean(r_st[year==2020],na.rm=TRUE)) %>%
+  summarise(irr_2014 = mean(fit_smr[year==2014],na.rm=TRUE),
+            irr_2015 = mean(fit_smr[year==2015],na.rm=TRUE),
+            irr_2016 = mean(fit_smr[year==2016],na.rm=TRUE),
+            irr_2017 = mean(fit_smr[year==2017],na.rm=TRUE),
+            irr_2018 = mean(fit_smr[year==2018],na.rm=TRUE),
+            irr_2019 = mean(fit_smr[year==2019],na.rm=TRUE),
+            irr_2020 = mean(fit_smr[year==2020],na.rm=TRUE)) %>%
   add_row(district="likoma",irr_2014=NA,irr_2015=NA,irr_2016=NA,irr_2017=NA,irr_2018=NA,irr_2019=NA,irr_2020=NA,.after = 9)
 ## add yearly irr to spatial dataframe
 mwdistr$irr_2014 <- estimYear$irr_2014
@@ -722,8 +735,8 @@ mwdistr$irr_2018 <- estimYear$irr_2018
 mwdistr$irr_2019 <- estimYear$irr_2019
 mwdistr$irr_2020 <- estimYear$irr_2020
 
-tiff("images/yealy_rate_ratios_april.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
-par(mfrow=c(3,3),mar=c(2,2,2,2))
+tiff("images/yealy_rate_ratios_july.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in 2014:2020){
   plot.yearly.incident.rates(i)
   title(main = i)
@@ -791,35 +804,56 @@ mwdistr$irr_2020 <- RR$irr_2020
 
 
 # temporal estimates
+
 temporalTrendData <- finaldata %>%
   group_by(year,month) %>%
   summarise(irrMean = median(SIR.50),
             L_IRR = median(SIR.025),
             U_IRR = median(SIR.975))
 
-plot(temporalTrendData$month,temporalTrendData$irrMean,type="l",ylim=c(0,4),lwd=2,axes=F)
+tiff("images/temporal_RR_estim.tif",width = (30*0.39),height = (20*0.39),units = "in",res = 450,compression = "lzw")
+par(mfrow=c(1,1),mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
+plot(temporalTrendData$month,temporalTrendData$irrMean,type="l",ylim=c(0,4),lwd=2,axes=F,ylab="Relative Risk")
 axis(1,at=seq(1,84,12),labels = c(2014:2020))
 axis(2,lwd = 1)
 lines(temporalTrendData$month,temporalTrendData$L_IRR,type = "l",lty=2)
 lines(temporalTrendData$month,temporalTrendData$U_IRR,type = "l",lty=2)
 abline(h=1,lty=2)
 box(lwd=1)
+dev.off()
 
+# temporal data for selected districts
+temporalTrendData_district <- finaldata %>%
+  group_by(year,district) %>%
+  summarise(irrMean = median(SIR.50),
+            L_IRR = median(SIR.025),
+            U_IRR = median(SIR.975))
+
+plot(2014:2020,temporalTrendData_district$irrMean[temporalTrendData_district$district=="balaka"],type="l",ylim=c(0,2.5))
+lines(2014:2020,temporalTrendData_district$L_IRR[temporalTrendData_district$district=="balaka"],type="l",lty=2)
+lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$district=="balaka"],type="l",lty=2)
+
+
+# function to plot district trends
+plot_district_level_risk <- function(district){
+  par(mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
+  plot(2014:2020,temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,2.5),ylab="Relative Risk",lwd=2)
+  lines(2014:2020,temporalTrendData_district$L_IRR[temporalTrendData_district$district==district],type="l",lty=2)
+  lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],type="l",lty=2)
+  
+}
+
+plot_district_level_risk("balaka")
+plot_district_level_risk("blantyre")
+plot_district_level_risk("nsanje")
+plot_district_level_risk("salima")
 # predicted estimates of relative risk
+n_samples <- nrow(finaldata)
+n_vars <- ncol(fit1$samples$fitted)
+
+RR_samples <- fit1$samples$fitted/matrix(finaldata$expectedCases,nrow = n_samples,ncol = n_vars,byrow = T)
 
 # model using brms
-not_1_car <- brm(bf(total_notif ~ 1 + 
-                      offset(log(population))),
-                 data=dat_scale_ln, 
-                 family=poisson,
-                 control = list(adapt_delta = 0.99, max_treedepth=10),
-                 autocor=cor_car(w4, ~ 1 | scale_cluster_area, type = "icar"),
-                 inits = 0,
-                 #prior = prior_not_1,
-                 cores=3,
-                 iter=15000, warmup=1000,
-                 seed = 1237,
-                 chains=3)
 
 brmData <- dat %>% filter(district != "likoma")
 fit.brm <- brm(bf(syphpos ~ offset(log(women_child_age)) + employed + sec_educ + syphlisTestingCoverage + electricity + median_age_birth + women_more_sexPpartners + women_HIV_pos),
@@ -827,6 +861,8 @@ fit.brm <- brm(bf(syphpos ~ offset(log(women_child_age)) + employed + sec_educ +
                family = "negbinomial",
                data2 = list(W=mwMat,type="icar"),
                chains = 2,
+               iter = 2500,
+               warmup = 1000,
                seed = 0112)
 print(fit.brm)
 plot(fit.brm)
