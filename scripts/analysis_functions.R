@@ -146,3 +146,65 @@ plot.yearly.incident.rates <- function(year){
          title = "RR")
   box(lwd=1,bty="o")
 }
+
+# function to plot exceedance probabilities
+plot_exceedance_probabilities <- function(year){
+  if(year==2014){
+    x <- "pep_2014"
+  } else if (year==2015){
+    x <- "pep_2015"
+  } else if (year==2016){
+    x <- "pep_2016"
+  } else if (year==2017){
+    x <- "pep_2017"
+  } else if (year==2018){
+    x <- "pep_2018"
+  } else if (year==2019){
+    x <- "pep_2019"
+  } else {
+    x <- "pep_2020"
+  }
+  brks <- c(0,0.2,0.4,0.6,0.8,1)
+  pal <- brewer.pal(6,"OrRd")
+  plot(mwdistr)
+  plot(lakes,add=T,col="lightblue")
+  plot(mwdistr,col=pal[findInterval(mwdistr@data[,x],brks)],add=T)
+  legend("bottomleft",
+         legend = leglabs(brks,"<",">="),
+         fill = pal,
+         bty = "n",
+         pt.cex = 1,
+         cex = 1)
+  box(lwd=1,bty="o")
+}
+
+# function to plot ecdf
+plot_ecdf_diagnostics <- function(modelFit,varpos,midpt,nSample){
+  ecdfLower <- ecdf(modelFit$samples$beta[,varpos][1:midpt])
+  ecdfUpper <- ecdf(modelFit$samples$beta[,varpos][midpt+1:nSample])
+  plot(ecdfLower,col="black",lwd=2)
+  lines(ecdfUpper,col="red",lwd=2)
+  legend("topleft",legend = c("Lower","Upper"),
+         lwd = c(2,2),
+         pt.cex = 1,
+         cex = 2,
+         col = c("black","red"),
+         bty = "n")
+}
+
+# function to create and summarize yearly exceedance probabilities
+yearly_posterior_exceedance_prob <- function(year,prob_threshold=1){
+  estim_risk_samples <- risk_samples_combined[,finaldata$year==year]
+  risk_estim_year <- apply(estim_risk_samples,2,median)
+  pep_estim_year <- apply(estim_risk_samples > prob_threshold,2,mean)
+  fit_data <- finaldata[finaldata$year==year,] %>%
+    mutate(pep = pep_estim_year,
+           r_st = risk_estim_year,
+           year = year)
+  fit_data_summ <- fit_data %>%
+    group_by(district) %>%
+    summarise(exprob = mean(pep,na.rm=T),
+              risk = mean(r_st,na.rm=T)) %>%
+    add_row(district="likoma",exprob=NA,.after = 9)
+  return(fit_data_summ)
+}
