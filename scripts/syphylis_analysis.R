@@ -3,16 +3,15 @@ rm(list = ls())
 library(rgdal)
 library(tidyverse)
 library(RColorBrewer)
-library(viridis)
 library(maptools)
 library(spdep)
 library(INLA)
 library(CARBayesST)
 library(CARBayes)
 library(MASS)
-library(brms)
-library(bayesplot)
-library(tidybayes)
+#library(brms)
+#library(bayesplot)
+#library(tidybayes)
 library(coda)
 
 ## load required spatial data
@@ -174,7 +173,7 @@ Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
 # function to capitalize first letter of a character
 simpleCap <- function(x){
   s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s, 1,1)), substring(s,2),
+  paste(toupper(substring(s,1,1)), substring(s,2),
         sep="", collapse=" ")
 }
 
@@ -549,6 +548,7 @@ m1 <- glm(syphpos ~ offset(log(expectedCases)) +
           data = dat,family = poisson())
 summary(m1)
 exp(cbind(IRR=coef(m1),CI=confint(m1)))
+AIC(m1)
 
 m2 <- glm(syphpos ~ offset(log(expectedCases)) + employed+
             sec_educ + syphlisTestingCoverage  + electricity +
@@ -566,14 +566,24 @@ AIC(m3)
 
 # reduced preliminary model with only key risk factors
 m4 <- glm(syphpos ~ offset(log(expectedCases)) + sec_educ + testCov + no_ANC + women_more_sexPpartners,problem_health_care + women_HIV_pos,
-          data = dat,family = quasipoisson())
+          data = dat,family = poisson())
 summary(m4)
 exp(cbind(IRR=coef(m4),CI=confint(m4)))
+AIC(m4)
 
 m5 <- glm(formula,data = dat,family = poisson())
+
 AIC(m5)
 
-### regression modelling for lattice data n- spatio-temporal modelling ### 
+# test for spatial autocorrelation in the m2 before going to the spatial model
+m2 <- glm(syphpos ~ offset(log(expectedCases)) + employed+
+            sec_educ + syphlisTestingCoverage  + electricity +
+            median_age_birth +women_more_sexPpartners + women_HIV_pos,
+          data = finaldata,family = poisson())
+
+finaldata$residuals <- residuals(m2)
+
+## regression modelling for lattice data n- spatio-temporal modelling ### 
 ### CAR models 
 
 ### CAR models using CARBayesST
@@ -594,6 +604,7 @@ finaldata$syphlisTestingCoverage[is.na(finaldata$syphlisTestingCoverage)] <- mea
 
 formula <- syphpos ~ offset(log(expectedCases)) + employed+ sec_educ + syphlisTestingCoverage  + electricity +median_age_birth +women_more_sexPpartners + women_HIV_pos
 
+# fit 3 chains
 
 set.seed(0012)
 fit1 <- ST.CARanova(formula = formula,
@@ -601,36 +612,107 @@ fit1 <- ST.CARanova(formula = formula,
                   data = finaldata, 
                   W=mwMat,
                   burnin = 3000,
-                  n.sample = 500000,
-                  thin = 50,
+                  n.sample = 620000,
+                  thin = 100,
                   verbose = TRUE)
-#summary(fit1)
-print(fit1)
 colnames(fit1$samples$beta) <- c("Intercept","employed","Education","Testing coverage","electricity","Age birth","Sex partners","HIV positive")
-plot(exp(fit1$samples$beta[,-1]))
 
-# model diagnostics
-plot.ecdf(ecdf(fit1$samples$beta[,2][1:2950])) # border
-lines(ecdf(fit1$samples$beta[,2][2951:5900]))
+set.seed(124)
+fit2 <- ST.CARanova(formula = formula,
+                    family = "poisson",
+                    data = finaldata, 
+                    W=mwMat,
+                    burnin = 3000,
+                    n.sample = 620000,
+                    thin = 100,
+                    verbose = TRUE)
+colnames(fit2$samples$beta) <- c("Intercept","employed","Education","Testing coverage","electricity","Age birth","Sex partners","HIV positive")
 
-# function to plot ecdf
-plot_ecdf_diagnostics <- function(modelFit,varpos,midpt,nSample){
-  ecdfLower <- ecdf(modelFit$samples$beta[,varpos][1:midpt])
-  ecdfUpper <- ecdf(modelFit$samples$beta[,varpos][midpt+1:nSample])
-  plot(ecdfLower,col="black",lwd=2)
-  lines(ecdfUpper,col="red",lwd=2)
-  legend("topleft",legend = c("Lower","Upper"),
-         lwd = c(2,2),
-         pt.cex = 1,
-         cex = 2,
-         col = c("black","red"),
-         bty = "n")
-}
-plot_ecdf_diagnostics(modelFit = fit1,varpos = 2,midpt = 250000,nSample = 500000)
-
-# incident rate ratios
+# incident rate ratios for model 1
 params <- summarise.samples(exp(fit1$samples$beta[,-1]),quantiles = c(0.5,0.025,0.975))
 round(params$quantiles,2)
+#summary(fit1)
+print(fit1)
+#colnames(fit1$samples$beta) <- c("Intercept","employed","Education","Testing coverage","electricity","Age birth","Sex partners","HIV positive")
+plot(exp(fit1$samples$beta[,-1]))
+
+# summarize rate ratios
+params <- summarise.samples(exp(fit1$samples$beta[,-1]),quantiles = c(0.5,0.025,0.975))
+round(params$quantiles,2)
+
+# combine chains for further inference
+
+model_samples <- coda::mcmc.list(fit1$samples$beta,fit2$samples$beta)
+plot(model_samples)
+coda::gelman.diag(model_samples)
+
+# further processing
+model_samples_all <- rbind(fit1$samples$fitted,fit2$samples$fitted)
+n_samples <- nrow(model_samples_all)
+n_all <- ncol(model_samples_all)
+risk_samples_combined <- model_samples_all /
+  matrix(rep(finaldata$expectedCases, n_samples), nrow=n_samples, ncol=n_all, byrow=TRUE)
+
+# check spatial trends
+N <- length(table(finaldata$year))
+risk_trends <- array(NA,c(n_samples,N))
+for(i in 1:n_samples){
+  risk_trends[i,] <- tapply(risk_samples_combined[i,],finaldata$year,mean)
+}
+
+time_trends <- as.data.frame(t(apply(risk_trends,2,quantile,c(0.5, 0.025, 0.975))))
+time_trends <- time_trends %>% mutate(Year=names(table(finaldata$year)))
+colnames(time_trends)[1:3] <- c("Median","LCI", "UCI")
+
+# plot temporal trends
+ggplot(time_trends, aes(x = factor(Year), y = Median, group=1)) +
+  geom_line(col="red") +
+  geom_line(aes(x=factor(Year), y=LCI),col="red",lty=2) +
+  geom_line(aes(x=factor(Year), y=UCI),col="red",lty=2) +
+  scale_x_discrete(name = "Year", breaks=c(2014,2015,2016,2017,2018,2019,2020),
+                   labels=c(2014,2015,2016,2017,2018,2019,2020)) +
+  scale_y_continuous(name = "Risk") +
+  theme_bw()  +
+  theme(text=element_text(size=16), 
+        plot.title=element_text(size=18, face="bold"),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16))
+ggsave("images/temporalRiskMap.tiff",compression="lzw")
+
+
+# function to plot exceedance probabilities
+
+pep_2014 <- yearly_posterior_exceedance_prob(year = 2014)
+pep_2015 <- yearly_posterior_exceedance_prob(year = 2015)
+pep_2016 <- yearly_posterior_exceedance_prob(year = 2016)
+pep_2017 <- yearly_posterior_exceedance_prob(year = 2017)
+pep_2018 <- yearly_posterior_exceedance_prob(year = 2018)
+pep_2019 <- yearly_posterior_exceedance_prob(year = 2019)
+pep_2020 <- yearly_posterior_exceedance_prob(year = 2020)
+
+# exceedance probalitie to the spatial data frame
+mwdistr$pep_2014 <- pep_2014$exprob
+mwdistr$pep_2014 <- pep_2015$exprob
+mwdistr$pep_2015 <- pep_2016$exprob
+mwdistr$pep_2016 <- pep_2016$exprob
+mwdistr$pep_2017 <- pep_2017$exprob
+mwdistr$pep_2018 <- pep_2017$exprob
+mwdistr$pep_2019 <- pep_2018$exprob
+mwdistr$pep_2020 <- pep_2019$exprob
+
+# exceedance probabilities for all years
+tiff("images/exceedance_prob.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 350,compression = "lzw")
+par(mfrow=c(2,4),mar=c(2,2,2,2))
+for(i in 2014:2020){
+  plot_exceedance_probabilities(year = i)
+  title(main = i)
+}
+dev.off()
+
+
+
+
+
 
 # map fitted values
 betas <- fit1$samples$beta
@@ -813,11 +895,13 @@ temporalTrendData <- finaldata %>%
 
 tiff("images/temporal_RR_estim.tif",width = (30*0.39),height = (20*0.39),units = "in",res = 450,compression = "lzw")
 par(mfrow=c(1,1),mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
-plot(temporalTrendData$month,temporalTrendData$irrMean,type="l",ylim=c(0,4),lwd=2,axes=F,ylab="Relative Risk")
+plot(temporalTrendData$month,temporalTrendData$irrMean,type="l",ylim=c(0,4),lwd=2,axes=F,ylab="Risk")
 axis(1,at=seq(1,84,12),labels = c(2014:2020))
 axis(2,lwd = 1)
-lines(temporalTrendData$month,temporalTrendData$L_IRR,type = "l",lty=2)
-lines(temporalTrendData$month,temporalTrendData$U_IRR,type = "l",lty=2)
+polygon(c(temporalTrendData$month,rev(temporalTrendData$month)),c(temporalTrendData$U_IRR,rev(temporalTrendData$L_IRR)),col="#e8daef",border=NA)
+lines(temporalTrendData$month,temporalTrendData$irrMean,lwd=2,col="#6f03a5")
+#lines(temporalTrendData$month,temporalTrendData$L_IRR,type = "l",lty=2)
+#lines(temporalTrendData$month,temporalTrendData$U_IRR,type = "l",lty=2)
 abline(h=1,lty=2)
 box(lwd=1)
 dev.off()
@@ -829,7 +913,7 @@ temporalTrendData_district <- finaldata %>%
             L_IRR = median(SIR.025),
             U_IRR = median(SIR.975))
 
-plot(2014:2020,temporalTrendData_district$irrMean[temporalTrendData_district$district=="balaka"],type="l",ylim=c(0,2.5))
+plot(temporalTrendData_district$year[temporalTrendData_district$district=="balaka"],temporalTrendData_district$irrMean[temporalTrendData_district$district=="balaka"],type="l",ylim=c(0,2.5),ylab="Relative Risk")
 lines(2014:2020,temporalTrendData_district$L_IRR[temporalTrendData_district$district=="balaka"],type="l",lty=2)
 lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$district=="balaka"],type="l",lty=2)
 
@@ -837,16 +921,23 @@ lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$dist
 # function to plot district trends
 plot_district_level_risk <- function(district){
   par(mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
-  plot(2014:2020,temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,2.5),ylab="Relative Risk",lwd=2)
-  lines(2014:2020,temporalTrendData_district$L_IRR[temporalTrendData_district$district==district],type="l",lty=2)
-  lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],type="l",lty=2)
-  
+  plot(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,4),ylab="Relative Risk",lwd=2)
+  polygon(c(temporalTrendData_district$year[temporalTrendData_district$district==district],rev(temporalTrendData_district$year[temporalTrendData_district$district==district])),
+            c(temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],rev(temporalTrendData_district$L_IRR[temporalTrendData_district$district==district])),col = "#e8daef",border = NA)
+  lines(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],lwd=2,col="#6f03a5")
+  abline(h=1,lty=2)
 }
 
+border_districts = c("karonga","mchinji","dedza","mwanza","machinga","mulanje")
+plot_district_level_risk("karonga")
 plot_district_level_risk("balaka")
-plot_district_level_risk("blantyre")
-plot_district_level_risk("nsanje")
-plot_district_level_risk("salima")
+
+tiff("images/border_district_risk.tif",width = 35*0.39,height = (25*0.39),units = "in",res = 350,compression = "lzw")
+par(mfrow=c(3,2),mar=c(4,4.5,2,2))
+for(i in 1:length(border_districts)){
+  plot_district_level_risk(border_districts[i])
+  title(main = border_districts[i])
+}
 # predicted estimates of relative risk
 n_samples <- nrow(finaldata)
 n_vars <- ncol(fit1$samples$fitted)
