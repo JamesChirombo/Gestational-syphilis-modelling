@@ -1,3 +1,18 @@
+# function to add denoninator - women of child bearing age
+split_data_by_district <- function(syphilis_data,district_code,pop_vec){
+  df <- filter(syphilis_data,distcode == district_code)
+  df$women_child_age <- rep(pop_vec,each=12)
+  return(df)
+}
+
+# function to capitalize first letter of a character
+simpleCap <- function(x){
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s,1,1)), substring(s,2),
+        sep="", collapse=" ")
+}
+
+
 ### syphilis prevalence at the district level ###
 Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
   newdata <- dat[dat$distcode==districtCode,]
@@ -11,13 +26,6 @@ Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
   axis(1,at=seq(1,ntime,12),labels=2014:2020,lwd=1)
   axis(2,lwd = 1)
   mtext(plotLabel,side = 2,line = 1,cex = 1.7,at=ymark,0,las=2)
-}
-
-# function to capitalize first letter of a character
-simpleCap <- function(x){
-  s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s, 1,1)), substring(s,2),
-        sep="", collapse=" ")
 }
 
 ##### create a function to plot the prevalennce for multiple years
@@ -130,9 +138,6 @@ plot.yearly.incident.rates <- function(year){
     x <- "irr_2020"
   }
   brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
-  #brks <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0,1.2,1.4)
-  #brks <- c(0,0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3)
-  #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
   mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
   plot(mwdistr)
   plot(lakes,add=T,col="lightblue")
