@@ -79,12 +79,7 @@ dat$low_BMI <- rep(variableData2$`% of women with BMI<18.5`,each=84)
 dat$severe_anaemia <- rep(variableData2$`% of women with severe anaemia`,each=84)
 dat$past_sec_educ <- rep(variableData$`% distribution of women aged 15-49 who had completed more than secondary education`,each=84)
 
-# function to add denoninator - women of child bearing age
-split_data_by_district <- function(syphilis_data,district_code,pop_vec){
-  df <- filter(syphilis_data,distcode == district_code)
-  df$women_child_age <- rep(pop_vec,each=12)
-  return(df)
-}
+
 
 split_data <- list()
 for(i in 1:28){
@@ -714,67 +709,7 @@ dev.off()
 
 
 
-# map fitted values
-betas <- fit1$samples$beta
-phis <- fit1$samples$phi # spatial 
-deltas <- fit1$samples$delta # temporal
-intrx <- fit1$samples$gamma # interaction
-betaMeans <- apply(betas,2,mean)
-phiMeans <- apply(phis,2,mean)
-deltaMeans <- apply(deltas,2,mean)
-gammaMeans <- apply(intrx,2,mean)
 
-# lower quantiles
-betaLower <- apply(betas,2,function(x)quantile(x,0.025))
-phiLower <- apply(phis,2,function(x)quantile(x,0.025))
-deltaLower <- apply(deltas,2,function(x)quantile(x,0.025))
-gammaLower <- apply(intrx,2,function(x)quantile(x,0.025))
-
-# upper quantiles
-betaUpper <- apply(betas,2,function(x)quantile(x,0.975))
-phiUpper <- apply(phis,2,function(x)quantile(x,0.975))
-deltaUpper <- apply(deltas,2,function(x)quantile(x,0.975))
-gammaUpper <- apply(intrx,2,function(x)quantile(x,0.975))
-
-# covariate values
-employed <- finaldata$employed
-educ <- finaldata$sec_educ
-testing.cov <- finaldata$syphlisTestingCoverage
-electricity <- finaldata$electricity
-age.birth <- finaldata$median_age_birth
-sex.partners <- finaldata$women_more_sexPpartners
-hivpos <- finaldata$women_HIV_pos
-
-# calculate overall risk across districts
-finaldata$r_st <- exp(betaMeans[1]+
-              betaMeans[2]*employed+
-              betaMeans[3]*educ+
-              betaMeans[4]*testing.cov+
-              betaMeans[5]*electricity+
-              betaMeans[6]*age.birth+
-              betaMeans[7]*sex.partners+
-              betaMeans[8]*hivpos+
-              phiMeans+deltaMeans+gammaMeans)
-# lower quantile risk
-finaldata$r_st_lower <- exp(betaLower[1]+
-                              betaLower[2]*employed+
-                              betaLower[3]*educ+
-                              betaLower[4]*testing.cov+
-                              betaLower[5]*electricity+
-                              betaLower[6]*age.birth+
-                              betaLower[7]*sex.partners+
-                              betaLower[8]*hivpos+
-                              phiMeans+deltaMeans+gammaMeans)
-# upper quantile risk
-finaldata$r_st_upper <- exp(betaUpper[1]+
-                              betaUpper[2]*employed+
-                              betaUpper[3]*educ+
-                              betaUpper[4]*testing.cov+
-                              betaUpper[5]*electricity+
-                              betaUpper[6]*age.birth+
-                              betaUpper[7]*sex.partners+
-                              betaUpper[8]*hivpos+
-                              phiMeans+deltaMeans+gammaMeans)
 
 finaldata$fitted_values <- fit1$fitted.values # fitted observed cases
 finaldata$fit_smr <- finaldata$fitted_values/finaldata$expectedCases
@@ -838,25 +773,6 @@ y1_risk <- rep(NA,nmonth)
 for( i in 1:nmonth ){
   y1_risk[i] <- mean(finaldata$r_st[finaldata$month==i & finaldata$year==2019],na.rm = T)
 }
-
-# create a matrix
-irrMat <- matrix(nrow = nyear,ncol = nmonth)
-for(i in 1:nmonth){
-  for(j in 1:nyear){
-    irrMat[j,i] <- mean(finaldata$r_st[finaldata$year==j | finaldata$month==i])
-  }
-}
-
-filled.contour(x = temporalTrendData$month,y = temporalTrendData$year ,z = temporalTrendData$mean_irr)
-
-x <- 1:dim(M)[1]
-y <- 1:ncol(M)
-filled.contour(x,y,M)
-
-## summary for fit2
-print(fit2)
-colnames(fit2$samples$beta) <- c("Intercept","border","Education","HIMS coverage","TFR","ANC","Sex partners","HC problem","HIV")
-plot(exp(fit2$samples$beta[,-1]))
 
 # posterior estimates of SIR
 y.fit <- fit1$samples$fitted
