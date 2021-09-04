@@ -9,9 +9,6 @@ library(INLA)
 library(CARBayesST)
 library(CARBayes)
 library(MASS)
-#library(brms)
-#library(bayesplot)
-#library(tidybayes)
 library(coda)
 
 ## load required spatial data
@@ -30,8 +27,6 @@ lakes <- readOGR("data/spatial","lakes")
 
 dat <- read.csv("data/epidata/syphilis_data_final.csv",header = T,stringsAsFactors = F)
 denom <- read.csv("data/epidata/denominator_data.csv",header = T)
-#j <- which(dat$district=="")
-#dat <- dat[-j,]
 
 # district vectors
 districtPop <- denom %>%
@@ -304,8 +299,7 @@ plot.syphilis.yearly.prevelence <- function(year){
     x <- "prev2020"
   }
   brks <- c(0.5,1,1.5,2,2.5,3,4,4.5,5,5.5)
-  #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
-  mycol <- colorRampPalette(c("#f5eef8","#6c3483"))(length(brks))
+   mycol <- colorRampPalette(c("#f5eef8","#6c3483"))(length(brks))
   plot(mwdistr)
   plot(lakes,add=T,col="lightblue")
   plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
@@ -529,7 +523,6 @@ dev.off()
 
 ## add coverage the data frame
 dat$covrge <- 1-dat$syphunk/dat$allwomen
-#dat$borderDistr <- ifelse(dat$district %in% c("ntcheu","dedza","mulanje","mzimba","kasungu","machinga","mchinji","nsanje","phalombe","chikwawa","mangochi","chitipa"),1,0)
 
 #############################################################################################
 ################################ question one ###############################################
@@ -704,13 +697,6 @@ for(i in 2014:2020){
 }
 dev.off()
 
-
-
-
-
-
-
-
 finaldata$fitted_values <- fit1$fitted.values # fitted observed cases
 finaldata$fit_smr <- finaldata$fitted_values/finaldata$expectedCases
 plotData <- finaldata %>%
@@ -860,82 +846,5 @@ n_vars <- ncol(fit1$samples$fitted)
 
 RR_samples <- fit1$samples$fitted/matrix(finaldata$expectedCases,nrow = n_samples,ncol = n_vars,byrow = T)
 
-# model using brms
-
-brmData <- dat %>% filter(district != "likoma")
-fit.brm <- brm(bf(syphpos ~ offset(log(women_child_age)) + employed + sec_educ + syphlisTestingCoverage + electricity + median_age_birth + women_more_sexPpartners + women_HIV_pos),
-               data = brmData,
-               family = "negbinomial",
-               data2 = list(W=mwMat,type="icar"),
-               chains = 2,
-               iter = 2500,
-               warmup = 1000,
-               seed = 0112)
-print(fit.brm)
-plot(fit.brm)
-fit.brm$autocor
-educ.samples <- posterior_samples(fit.brm,pars = "sec_educ")
-
-# plot marginal effects
-conditional_effects(fit.brm,effects = "sec_educ")
-
-fit.brm2 <- brm(bf(syphpos ~ offset(log(women_child_age)) + employed + sec_educ + syphlisTestingCoverage + electricity + median_age_birth + women_more_sexPpartners + women_HIV_pos + (1|distcode)),
-               data = brmData,
-               family = "negbinomial",
-               data2 = list(W=mwMat,type="icar"),
-               chains = 2,
-               seed = 0101)
-print(fit.brm2)
-plot(fit.brm2)
-
-fit.samples <- posterior_samples(fit.brm2,"^b")
-fit.summary <- posterior_summary(fit.brm2)
-
-fit.brm2$fit@sim$samples[[1]][5]
-param_estim = tibble(intercept =  fit.brm2$fit@sim$samples[[1]]$b_Intercept,
-                     employed = fit.brm2$fit@sim$samples[[1]]$b_employed,
-                     educ = fit.brm2$fit@sim$samples[[1]]$b_sec_educ,
-                     testingCoverage = fit.brm2$fit@sim$samples[[1]]$b_syphlisTestingCoverage,
-                     electricityCov = fit.brm2$fit@sim$samples[[1]]$b_electricity,
-                     medianAge = fit.brm2$fit@sim$samples[[1]]$b_median_age_birth,
-                     sexPartners = fit.brm2$fit@sim$samples[[1]]$b_women_more_sexPpartners,
-                     hivPrev = fit.brm2$fit@sim$samples[[1]]$b_women_HIV_pos)
-param_beta <- apply(param_estim,2,median)
-
-# parameter values
-employed <- brmData$employed
-educ <- brmData$sec_educ
-testing.cov <- brmData$syphlisTestingCoverage
-electricity <- brmData$electricity
-age.birth <- brmData$median_age_birth
-sex.partners <- brmData$women_more_sexPpartners
-hivpos <- brmData$women_HIV_pos
-
-# calculate overall risk across districts
-brmData$r_st <- exp(param_beta[1]+
-                        param_beta[2]*employed+
-                        param_beta[3]*educ+
-                        param_beta[4]*testing.cov+
-                        param_beta[5]*electricity+
-                        param_beta[6]*age.birth+
-                        param_beta[7]*sex.partners+
-                        param_beta[8]*hivpos)
-# plot estimates
-betas <- fit.brm$fit@sim$samples
-phis <- fit1$samples$phi # spatial 
-deltas <- fit1$samples$delta # temporal
-intrx <- fit1$samples$gamma # interaction
-betaMeans <- apply(betas,2,mean)
-phiMeans <- apply(phis,2,mean)
-deltaMeans <- apply(deltas,2,mean)
-gammaMeans <- apply(intrx,2,mean)
 
 
-# model diagnostics
-mcmc_acf(posterior_samples(fit.brm))
-pp_check(fit.brm,nsamples = 1000)
-preds <- brmData %>%
-  add_predicted_draws(fit.brm)
-
-# bayesian R2
-bayes_R2(fit.brm)
