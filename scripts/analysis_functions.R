@@ -14,7 +14,7 @@ simpleCap <- function(x){
 
 
 ### syphilis prevalence at the district level ###
-Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
+plot_district_prevalence <- function(data,timeLen,districtCode,plotLabel,ymark){
   newdata <- dat[dat$distcode==districtCode,]
   newdataSeries <- rep(NA,timeLen)
   for( i in 1:timeLen ){
@@ -30,7 +30,7 @@ Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
 
 ##### create a function to plot the prevalennce for multiple years
 ##### function uses the data from the data frame G summarized above 
-plot.syphilis.yearly.prevelence <- function(year){
+plot_syphilis_yearly_prevalence <- function(year){
   if(year==2014){
     x <- "prev2014"
   } else if (year==2015){
@@ -61,7 +61,7 @@ plot.syphilis.yearly.prevelence <- function(year){
 }
 
 # syphilis testing coverage
-plot.syphilis.testing.coverage <- function(year){
+plot_syphilis_testing_coverage <- function(year){
   if(year==2014){
     x <- "y1cov"
   } else if (year==2015){
@@ -90,7 +90,7 @@ plot.syphilis.testing.coverage <- function(year){
 }
 
 ## function to plot yearly smr rates
-plot.syphilis.yearly.smr <- function(year){
+plot_syphilis_yearly_smr <- function(year){
   if(year==2014){
     x <- "smr2014"
   } else if (year==2015){
@@ -117,11 +117,11 @@ plot.syphilis.yearly.smr <- function(year){
          bty = "n",
          pt.cex = 1,
          cex = 1,
-         title = 'SMR')
+         title = 'SIR')
   box(lwd=1,bty="o")
 }
 
-plot.yearly.incident.rates <- function(year){
+plot_yearly_incident_rates <- function(year){
   if(year==2014){
     x <- "irr_2014"
   } else if (year==2015){
