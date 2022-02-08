@@ -29,7 +29,7 @@ lakes <- readOGR("data/spatial","lakes")
 ## load syhphilis data
 
 dat <- read.csv("data/epidata/syphilis_data_final.csv",header = T,stringsAsFactors = F)
-denom <- read.csv("data/epidata/denominator_data.csv",header = T)
+denom <- read.csv("data/epidata/denominator_data.csv",header = T,stringsAsFactors = F)
 #j <- which(dat$district=="")
 #dat <- dat[-j,]
 
@@ -115,22 +115,22 @@ casesDistr <- dat %>%
             prevdistr = mean(prev,na.rm = TRUE))
 
 ## map the total number of cases per district
-tiff("images/malawi_syphilisPos.tif",width = (25*0.39),height = (35*0.39),units = "in",res = 350,compression = "lzw")
-par(mfrow=c(1,1),mar=c(2,2,2,2))
-mwdistr$syph <- casesDistr$prevdistr
-brks <- c(0,5,10,15,20,25)
-cols <- terrain.colors(6)
-plot(mwdistr)
-plot(lakes,add=TRUE,col="lightblue")
-plot(mwdistr,col=cols[findInterval(mwdistr$syph,brks)],add=TRUE)
-legend("bottomleft",
-       legend = leglabs(brks,"<",">="),
-       fill = cols,
-       bty = "n",
-       pt.cex = 1,
-       cex = 2)
-box(lwd=1,bty="o")
-dev.off()
+#tiff("images/malawi_syphilisPos.tif",width = (25*0.39),height = (35*0.39),units = "in",res = 350,compression = "lzw")
+#par(mfrow=c(1,1),mar=c(2,2,2,2))
+#mwdistr$syph <- casesDistr$prevdistr
+#brks <- c(0,5,10,15,20,25)
+#cols <- terrain.colors(6)
+#plot(mwdistr)
+#plot(lakes,add=TRUE,col="lightblue")
+#plot(mwdistr,col=cols[findInterval(mwdistr$syph,brks)],add=TRUE)
+#legend("bottomleft",
+#       legend = leglabs(brks,"<",">="),
+#       fill = cols,
+#       bty = "n",
+#       pt.cex = 1,
+#       cex = 2)
+#box(lwd=1,bty="o")
+#dev.off()
 
 
 ## yearly syphilis prevalence
@@ -151,26 +151,6 @@ box(lwd=1,bty="o")
 dev.off()
 
 ### syphilis prevalence at the district level ###
-Plot.district.prevelence <- function(data,timeLen,districtCode,plotLabel,ymark){
-  newdata <- dat[dat$distcode==districtCode,]
-  newdataSeries <- rep(NA,timeLen)
-  for(i in 1:timeLen){
-    newdataSeries[i] <- sum(newdata$syphpos[newdata$month==i],na.rm = T)/(sum(newdata$allwomen[newdata$month==i],na.rm=T))*100 # edit demoninator
-  }
-  par(cex.lab=1.5,cex.axis=1.5,mar=c(4,4.5,2,2))
-  plot(1:timeLen,newdataSeries,type='l',col="black",lwd=1.5,xlab="Year",ylab="Prevalence (%)", ylim=c(0,8),axes=F)
-  box(lwd=1,bty="o")
-  axis(1,at=seq(1,ntime,12),labels=2014:2020,lwd=1)
-  axis(2,lwd = 1)
-  mtext(plotLabel,side = 2,line = 1,cex = 1.7,at=ymark,0,las=2)
-}
-
-# function to capitalize first letter of a character
-simpleCap <- function(x){
-  s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s,1,1)), substring(s,2),
-        sep="", collapse=" ")
-}
 
 
 ## plot time series for selected districts
@@ -178,7 +158,7 @@ tiff("images/ditrict_level_prevelence.tif",width = (45*0.39),height = (25*0.39),
 par(mfrow=c(3,5),mar=c(1.3,1.3,1.3,1.3))
 nd <- unique(dat$district)[1:15]
 for(i in 1:15){
-  Plot.district.prevelence(dat,72,i,"",25)
+  plot_district_prevalence(dat,72,i,"",25)
   title(simpleCap(nd[i]))
 }
 dev.off()
@@ -197,7 +177,7 @@ dat$smr <- dat$syphpos/dat$expectedCases
 smrData <- dat %>%
   group_by(year) %>%
   summarise(smrYear = mean(smr,na.r=T))
-plot(smrData$year,smrData$smrYear,type="l",xlab="",ylab="SMR",lwd=2)
+#plot(smrData$year,smrData$smrYear,type="l",xlab="",ylab="SMR",lwd=2)
 
 # summarize smr by month
 smrDataMonth <- dat %>%
@@ -286,45 +266,13 @@ mwdistr$smr2020 <- smrYear$yr7
 
 
 ##### create a function to plot the prevalennce for multiple years
-##### function uses the data from the data frame G summarized above 
-plot.syphilis.yearly.prevelence <- function(year){
-  if(year==2014){
-    x <- "prev2014"
-  } else if (year==2015){
-    x <- "prev2015"
-  } else if (year==2016){
-    x <- "prev2016"
-  } else if (year==2017){
-    x <- "prev2017"
-  } else if (year==2018){
-    x <- "prev2018"
-  } else if (year==2019){
-    x <- "prev2019"
-  } else {
-    x <- "prev2020"
-  }
-  brks <- c(0.5,1,1.5,2,2.5,3,4,4.5,5,5.5)
-  #mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
-  mycol <- colorRampPalette(c("#f5eef8","#6c3483"))(length(brks))
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = mycol,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1,
-         title = "Prevalence (%)")
-  box(lwd=1,bty="o")
-}
 
 # plot yearly prevalence
 tiff("images/prevelence_year.tif",width = 35*0.39,height = 25*0.39,units = "in",res = 450,compression = "lzw")
 par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in 2014:2020){
-  plot.syphilis.yearly.prevelence(i)
-  title(main=i)
+  plot_syphilis_yearly_prevalence(i)
+  title(main=i,cex.main=1.8)
 }
 dev.off()
 
@@ -332,8 +280,8 @@ dev.off()
 tiff("images/yearly_SMR.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
 par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in 2014:2020){
-  plot.syphilis.yearly.smr(year=i)
-  title(main = i)
+  plot_syphilis_yearly_smr(year=i)
+  title(main = i,cex.main=1.8)
 }
 dev.off()
 
@@ -371,40 +319,11 @@ mwdistr$y6cov <- (1-test.cov.yr$y6)*100
 mwdistr$y7cov <- (1-test.cov.yr$y7)*100
 
 
-plot.syphilis.testing.coverage <- function(year){
-  if(year==2014){
-    x <- "y1cov"
-  } else if (year==2015){
-    x <- "y2cov"
-  } else if (year==2016){
-    x <- "y3cov"
-  } else if (year==2017){
-    x <- "y4cov"
-  } else if (year==2018){
-    x <- "y5cov"
-  } else if (year==2019){
-    x <- "y6cov"
-  } else {
-    x <- "y7cov"
-  }
-  brks <- c(40,50,60,70,80,90)
-  cols <- colorRampPalette(rev(c("gold","yellow","green")))(9)
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=cols[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = cols,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1)
-  box(lwd=1,bty="o")
-}
 tiff("images/testing_coverages_years.tif",width = 35*0.39,height = 25*0.29,units = "in",res = 350,compression = "lzw")
 par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in c(2014:2020)){
-  plot.syphilis.testing.coverage(year = i)
-  title(main=i)
+  plot_syphilis_testing_coverage(year = i)
+  title(main=i,cex.main=1.8)
 }
 dev.off()
 ## create a function for plotting multiple maps
@@ -590,7 +509,7 @@ finaldata <- filter(dat,district != "likoma")
 
 ## remove missing values
 
-finaldata$syphpos[is.na(finaldata$syphpos)] <- floor(mean(finaldata$syphpos,na.rm=TRUE))
+#finaldata$syphpos[is.na(finaldata$syphpos)] <- floor(mean(finaldata$syphpos,na.rm=TRUE)) # mising values allowed
 finaldata$expectedCases[is.na(finaldata$expectedCases)] <- mean(finaldata$expectedCases,na.rm=TRUE)
 finaldata$TFR[is.na(finaldata$TFR)] <- mean(finaldata$TFR,na.rm=TRUE)
 finaldata$syphlisTestingCoverage[is.na(finaldata$syphlisTestingCoverage)] <- mean(finaldata$syphlisTestingCoverage,na.rm=TRUE)
@@ -606,7 +525,7 @@ fit1 <- ST.CARanova(formula = formula,
                   family = "poisson",
                   data = finaldata, 
                   W=mwMat,
-                  burnin = 3000,
+                  burnin = 20000,
                   n.sample = 620000,
                   thin = 100,
                   verbose = TRUE)
@@ -617,7 +536,7 @@ fit2 <- ST.CARanova(formula = formula,
                     family = "poisson",
                     data = finaldata, 
                     W=mwMat,
-                    burnin = 3000,
+                    burnin = 20000,
                     n.sample = 620000,
                     thin = 100,
                     verbose = TRUE)
@@ -661,18 +580,18 @@ colnames(time_trends)[1:3] <- c("Median","LCI", "UCI")
 
 # plot temporal trends
 ggplot(time_trends, aes(x = factor(Year), y = Median, group=1)) +
-  geom_line(col="red") +
-  geom_line(aes(x=factor(Year), y=LCI),col="red",lty=2) +
-  geom_line(aes(x=factor(Year), y=UCI),col="red",lty=2) +
+  geom_line(col="black") +
+  geom_line(aes(x=factor(Year), y=LCI),col="black",lty=2) +
+  geom_line(aes(x=factor(Year), y=UCI),col="black",lty=2) +
   scale_x_discrete(name = "Year", breaks=c(2014,2015,2016,2017,2018,2019,2020),
                    labels=c(2014,2015,2016,2017,2018,2019,2020)) +
   scale_y_continuous(name = "Risk") +
   theme_bw()  +
-  theme(text=element_text(size=16), 
+  theme(text=element_text(size=17), 
         plot.title=element_text(size=18, face="bold"),
-        axis.text.x = element_text(size = 16),
-        axis.text.y = element_text(size = 16))
-ggsave("images/temporalRiskMap.tiff",compression="lzw")
+        axis.text.x = element_text(size = 17),
+        axis.text.y = element_text(size = 17))
+ggsave("images/temporalRiskMap.tiff",width = 400,height = 350,compression="lzw",units = "mm")
 
 
 # function to plot exceedance probabilities
@@ -700,15 +619,9 @@ tiff("images/exceedance_prob.tif",width = (35*0.39),height = (25*0.39),units = "
 par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in 2014:2020){
   plot_exceedance_probabilities(year = i)
-  title(main = i)
+  title(main = i,cex.main=1.8)
 }
 dev.off()
-
-
-
-
-
-
 
 
 finaldata$fitted_values <- fit1$fitted.values # fitted observed cases
@@ -755,8 +668,8 @@ mwdistr$irr_2020 <- estimYear$irr_2020
 tiff("images/yealy_rate_ratios_july.tif",width = (35*0.39),height = (25*0.39),units = "in",res = 450,compression = "lzw")
 par(mfrow=c(2,4),mar=c(2,2,2,2))
 for(i in 2014:2020){
-  plot.yearly.incident.rates(i)
-  title(main = i)
+  plot_yearly_incident_rates(i)
+  title(main = i,cex.main=1.8)
 }
 dev.off()
 
@@ -834,15 +747,7 @@ lines(2014:2020,temporalTrendData_district$L_IRR[temporalTrendData_district$dist
 lines(2014:2020,temporalTrendData_district$U_IRR[temporalTrendData_district$district=="balaka"],type="l",lty=2)
 
 
-# function to plot district trends
-plot_district_level_risk <- function(district){
-  par(mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
-  plot(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,4),ylab="Relative Risk",lwd=2)
-  polygon(c(temporalTrendData_district$year[temporalTrendData_district$district==district],rev(temporalTrendData_district$year[temporalTrendData_district$district==district])),
-            c(temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],rev(temporalTrendData_district$L_IRR[temporalTrendData_district$district==district])),col = "#e8daef",border = NA)
-  lines(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],lwd=2,col="#6f03a5")
-  abline(h=1,lty=2)
-}
+# district trends
 
 border_districts = c("karonga","mchinji","dedza","mwanza","machinga","mulanje")
 plot_district_level_risk("karonga")
@@ -852,7 +757,7 @@ tiff("images/border_district_risk.tif",width = 35*0.39,height = (25*0.39),units 
 par(mfrow=c(3,2),mar=c(4,4.5,2,2))
 for(i in 1:length(border_districts)){
   plot_district_level_risk(border_districts[i])
-  title(main = border_districts[i])
+  title(main = simpleCap(border_districts[i]),cex.main=1.7)
 }
 # predicted estimates of relative risk
 n_samples <- nrow(finaldata)
