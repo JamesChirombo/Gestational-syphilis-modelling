@@ -1,3 +1,5 @@
+# functions for data analysis
+
 # function to add denoninator - women of child bearing age
 split_data_by_district <- function(syphilis_data,district_code,pop_vec){
   df <- filter(syphilis_data,distcode == district_code)
