@@ -213,3 +213,13 @@ yearly_posterior_exceedance_prob <- function(year,prob_threshold=1){
     add_row(district="likoma",exprob=NA,.after = 9)
   return(fit_data_summ)
 }
+
+# function to plot district level trends
+plot_district_level_risk <- function(district){
+  par(mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
+  plot(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,4),ylab="Relative Risk",lwd=2)
+  polygon(c(temporalTrendData_district$year[temporalTrendData_district$district==district],rev(temporalTrendData_district$year[temporalTrendData_district$district==district])),
+          c(temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],rev(temporalTrendData_district$L_IRR[temporalTrendData_district$district==district])),col = "#e8daef",border = NA)
+  lines(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],lwd=2,col="#6f03a5")
+  abline(h=1,lty=2)
+}
