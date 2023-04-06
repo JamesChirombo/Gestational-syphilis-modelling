@@ -1,9 +1,72 @@
 # functions for data analysis
+# create a function for the figures
+# district level prevalence
+plot_district_prevalence <- function(summary.district.poly,lake.poly){
+  malawi_prev <- tm_shape(summary.district.poly) +
+    tm_polygons(col = "syph_prev",border.col = "black",title = "Prevalence", palette = "YlGnBu") +
+    tm_facets(by = "year",ncol = 5, nrow = 2) +
+    tm_shape(lake.poly) +
+    tm_polygons(col = "lightblue", border.col = "black") +
+    tm_layout(legend.position = c("left","bottom"),
+              legend.outside = FALSE,
+              legend.text.size = 1.1,
+              legend.title.size = 1.2,
+              panel.label.size = 1.3,
+              panel.label.fontface = "bold",
+              asp = 0)
+  return(malawi_prev)
+}
 
+# district level smr
+plot_district_smr <- function(summary.district.poly,lake.poly){
+  malawi_smr <- tm_shape(summary.district.poly) +
+    tm_polygons(col = "smr",border.col = "black", title = "SMR", palette = "YlGnBu") +
+    tm_facets(by = "year", ncol = 5, nrow = 2) +
+    tm_shape(lake.poly) +
+    tm_polygons(col = "lightblue", border.col = "black") +
+    tm_layout(legend.outside = FALSE,
+              legend.position = c("left","bottom"),
+              legend.text.size = 1.1,
+              legend.title.size = 1.2,
+              panel.label.size = 1.3,
+              panel.label.fontface = "bold")
+  return(malawi_smr)
+}
+
+# exceedance probabilities
+plot_exceedance_probabilities <- function(summary.district.poly,lake.poly){
+  exprob <- tm_shape(summary.district.poly) +
+    tm_polygons(border.col = "black",col = "exprob", title = "Exceedance prob.", palette = "YlGnBu") +
+    tm_facets(by = "year", nrow = 2, ncol = 5) +
+    tm_shape(lake.poly) +
+    tm_polygons(col = "lightblue", border.col = "black") +
+    tm_layout(legend.outside = FALSE,
+              legend.position = c("left","bottom"),
+              legend.text.size = 1.1,
+              legend.title.size = 1.2,
+              panel.label.size = 1.3,
+              panel.label.fontface = "bold")
+  return(exprob)
+}
+
+plot_predicted_irr <- function(summary.district.poly, lake.poly, break.style){
+  irr_yr <- tm_shape(summary.district.poly) +
+    tm_polygons(border.col = "black",col = "irr", title = "IRR", n = 7, style = break.style, palette = "YlGnBu") +
+    tm_facets(by = c("year"), nrow = 2, ncol = 5) +
+    tm_shape(lake.poly) +
+    tm_polygons(col = "lightblue", border.col = "black") +
+    tm_layout(legend.outside = FALSE,
+              legend.position = c("left","bottom"),
+              legend.text.size = 1.1,
+              legend.title.size = 1.2,
+              legend.format = list(fun = function(x) formatC(x, digits = 2, format = "f")),
+              panel.label.size = 1.3,
+              panel.label.fontface = "bold")
+}
 # function to add denoninator - women of child bearing age
 split_data_by_district <- function(syphilis_data,district_code,pop_vec){
   df <- filter(syphilis_data,distcode == district_code)
-  df$women_child_age <- rep(pop_vec,each=12)
+  df$women_child_age <- rep(pop_vec,each = 12)
   return(df)
 }
 
@@ -11,186 +74,15 @@ split_data_by_district <- function(syphilis_data,district_code,pop_vec){
 simpleCap <- function(x){
   s <- strsplit(x, " ")[[1]]
   paste(toupper(substring(s,1,1)), substring(s,2),
-        sep="", collapse=" ")
-}
-
-
-### syphilis prevalence at the district level ###
-plot_district_prevalence <- function(data,timeLen,districtCode,plotLabel,ymark){
-  newdata <- dat[dat$distcode==districtCode,]
-  newdataSeries <- rep(NA,timeLen)
-  for( i in 1:timeLen ){
-    newdataSeries[i] <- sum(newdata$syphpos[newdata$month==i],na.rm = T)/(sum(newdata$allwomen[newdata$month==i],na.rm=T))*100
-  }
-  par(cex.lab=1.5,cex.axis=1.5,mar=c(4,4.5,2,2))
-  plot(1:timeLen,newdataSeries,type='l',col="black",lwd=1.5,xlab="Year",ylab="Prevalence (%)", ylim=c(0,8),axes=F)
-  box(lwd=1,bty="o")
-  axis(1,at=seq(1,ntime,12),labels=2014:2020,lwd=1)
-  axis(2,lwd = 1)
-  mtext(plotLabel,side = 2,line = 1,cex = 1.7,at=ymark,0,las=2)
-}
-
-##### create a function to plot the prevalennce for multiple years
-##### function uses the data from the data frame G summarized above 
-plot_syphilis_yearly_prevalence <- function(year){
-  if(year==2014){
-    x <- "prev2014"
-  } else if (year==2015){
-    x <- "prev2015"
-  } else if (year==2016){
-    x <- "prev2016"
-  } else if (year==2017){
-    x <- "prev2017"
-  } else if (year==2018){
-    x <- "prev2018"
-  } else if (year==2019){
-    x <- "prev2019"
-  } else {
-    x <- "prev2020"
-  }
-  brks <- c(0.5,1,1.5,2,2.5,3,4)
-  mycol <- colorRampPalette(c("lightgreen","yellow","gold"))(length(brks))
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = mycol,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1)
-  box(lwd=1,bty="o")
-}
-
-# syphilis testing coverage
-plot_syphilis_testing_coverage <- function(year){
-  if(year==2014){
-    x <- "y1cov"
-  } else if (year==2015){
-    x <- "y2cov"
-  } else if (year==2016){
-    x <- "y3cov"
-  } else if (year==2017){
-    x <- "y4cov"
-  } else if (year==2018){
-    x <- "y5cov"
-  } else {
-    x <- "y6cov"
-  }
-  brks <- c(10,20,30,40,50,60,70,80,90)
-  cols <- colorRampPalette(rev(c("gold","yellow","green")))(9)
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=cols[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = cols,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1)
-  box(lwd=1,bty="o")
-}
-
-## function to plot yearly smr rates
-plot_syphilis_yearly_smr <- function(year){
-  if(year==2014){
-    x <- "smr2014"
-  } else if (year==2015){
-    x <- "smr2015"
-  } else if (year==2016){
-    x <- "smr2016"
-  } else if (year==2017){
-    x <- "smr2017"
-  } else if (year==2018){
-    x <- "smr2018"
-  } else if (year==2019){
-    x <- "smr2019"
-  } else {
-    x <- "smr2020"
-  }
-  brks <- c(0,0.5,1,1.5,2,2.5,3)
-  mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue",density=50)
-  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = mycol,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1,
-         title = 'SIR')
-  box(lwd=1,bty="o")
-}
-
-plot_yearly_incident_rates <- function(year){
-  if(year==2014){
-    x <- "irr_2014"
-  } else if (year==2015){
-    x <- "irr_2015"
-  } else if (year==2016){
-    x <- "irr_2016"
-  } else if (year==2017){
-    x <- "irr_2017"
-  } else if (year==2018){
-    x <- "irr_2018"
-  } else if (year==2019){
-    x <- "irr_2019"
-  } else {
-    x <- "irr_2020"
-  }
-  brks <- c(0,0.3,0.6,0.9,1.2,1.5,1.8,2.1)
-  mycol <- colorRampPalette(c("#d6eaf8","#d2b4de","#7d3c98"))(length(brks))
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=mycol[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = mycol,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1,
-         title = "RR")
-  box(lwd=1,bty="o")
-}
-
-# function to plot exceedance probabilities
-plot_exceedance_probabilities <- function(year){
-  if(year==2014){
-    x <- "pep_2014"
-  } else if (year==2015){
-    x <- "pep_2015"
-  } else if (year==2016){
-    x <- "pep_2016"
-  } else if (year==2017){
-    x <- "pep_2017"
-  } else if (year==2018){
-    x <- "pep_2018"
-  } else if (year==2019){
-    x <- "pep_2019"
-  } else {
-    x <- "pep_2020"
-  }
-  brks <- c(0,0.2,0.4,0.6,0.8,1)
-  pal <- brewer.pal(6,"OrRd")
-  plot(mwdistr)
-  plot(lakes,add=T,col="lightblue")
-  plot(mwdistr,col=pal[findInterval(mwdistr@data[,x],brks)],add=T)
-  legend("bottomleft",
-         legend = leglabs(brks,"<",">="),
-         fill = pal,
-         bty = "n",
-         pt.cex = 1,
-         cex = 1)
-  box(lwd=1,bty="o")
+        sep = "", collapse = " ")
 }
 
 # function to plot ecdf
 plot_ecdf_diagnostics <- function(modelFit,varpos,midpt,nSample){
   ecdfLower <- ecdf(modelFit$samples$beta[,varpos][1:midpt])
-  ecdfUpper <- ecdf(modelFit$samples$beta[,varpos][midpt+1:nSample])
-  plot(ecdfLower,col="black",lwd=2)
-  lines(ecdfUpper,col="red",lwd=2)
+  ecdfUpper <- ecdf(modelFit$samples$beta[,varpos][midpt + 1:nSample])
+  plot(ecdfLower,col = "black",lwd = 2)
+  lines(ecdfUpper,col = "red",lwd = 2)
   legend("topleft",legend = c("Lower","Upper"),
          lwd = c(2,2),
          pt.cex = 1,
@@ -200,28 +92,18 @@ plot_ecdf_diagnostics <- function(modelFit,varpos,midpt,nSample){
 }
 
 # function to create and summarize yearly exceedance probabilities
-yearly_posterior_exceedance_prob <- function(year,prob_threshold=1){
-  estim_risk_samples <- risk_samples_combined[,finaldata$year==year]
+yearly_posterior_exceedance_prob <- function(year,prob_threshold = 1){
+  estim_risk_samples <- risk_samples_combined[,finaldata$year == year]
   risk_estim_year <- apply(estim_risk_samples,2,median)
   pep_estim_year <- apply(estim_risk_samples > prob_threshold,2,mean)
-  fit_data <- finaldata[finaldata$year==year,] %>%
+  fit_data <- finaldata[finaldata$year == year,] %>%
     mutate(pep = pep_estim_year,
            r_st = risk_estim_year,
            year = year)
   fit_data_summ <- fit_data %>%
     group_by(district) %>%
-    summarise(exprob = mean(pep,na.rm=T),
-              risk = mean(r_st,na.rm=T)) %>%
-    add_row(district="likoma",exprob=NA,.after = 9)
+    summarise(exprob = mean(pep,na.rm = T),
+              risk = mean(r_st,na.rm = T)) %>%
+    add_row(district = "likoma",exprob = NA,.after = 9)
   return(fit_data_summ)
-}
-
-# function to plot district level trends
-plot_district_level_risk <- function(district){
-  par(mar=c(2,4.5,2,2),cex.axis=1.4,cex.lab=1.4)
-  plot(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],type="l",ylim=c(0,4),ylab="Relative Risk",lwd=2)
-  polygon(c(temporalTrendData_district$year[temporalTrendData_district$district==district],rev(temporalTrendData_district$year[temporalTrendData_district$district==district])),
-          c(temporalTrendData_district$U_IRR[temporalTrendData_district$district==district],rev(temporalTrendData_district$L_IRR[temporalTrendData_district$district==district])),col = "#e8daef",border = NA)
-  lines(temporalTrendData_district$year[temporalTrendData_district$district==district],temporalTrendData_district$irrMean[temporalTrendData_district$district==district],lwd=2,col="#6f03a5")
-  abline(h=1,lty=2)
 }
